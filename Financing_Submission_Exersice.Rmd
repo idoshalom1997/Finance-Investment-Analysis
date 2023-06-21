@@ -1,0 +1,2186 @@
+---
+title: "Financing Submission Exercise"
+author: "Ido Shalom"
+date: "21-06-2023"
+output:
+  pdf_document:
+    latex_engine: pdflatex
+---
+
+
+```{r setup,include=FALSE , echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Clear desk
+rm(list=ls())
+
+# setwd("C:\\Users\\X\\Desktop\\R\\Finance")
+
+#Load Libraries
+library(tidyverse) # This includes dplyr, stringr, ggplot2, .. 
+library(data.table)
+library(rworldmap) # world map
+library(ggthemes)
+library(reshape2) # melt: change data-frame format long/wide
+library(e1071) # skewness and kurtosis
+library(rvest)
+library(corrplot)
+library(moments)
+library(spatstat.geom)
+library(dplyr)
+library(ggplot2)
+library(rmarkdown)
+library(knitr)
+library(PortfolioAnalytics)
+library(gridExtra)
+library(quadprog)  
+```
+
+
+### Question 1
+
+**1.a.**
+
+
+In order to calculate the NPV for the 3 projects, we first need to find the EAR of each project according to the formula below:
+\[ EAR = \left(1 + \frac{r}{n}\right)^{nt}- 1 \]
+
+
+```{r, echo=FALSE}
+# Calculate EAR for each project
+# Define the capitalization rates
+capitalization_rates <- c(0.01, 0.04, 0.09, 0.12, 0.14)
+
+# Calculate EAR for Project A (monthly)
+EAR_A <- (1 + (capitalization_rates/12))^12 - 1
+
+# Calculate EAR for Project B (yearly)
+EAR_B <- (1 + (capitalization_rates)) - 1
+
+# Calculate EAR for Project C (quarterly)
+EAR_C <- (1 + (capitalization_rates/4))^4 - 1
+
+# Create a DF to store the results
+DF_EAR <- data.frame(
+  Capitalization_Rate = capitalization_rates,
+  Project_A_EAR = EAR_A,
+  Project_B_EAR = EAR_B,
+  Project_C_EAR = EAR_C
+)
+
+# Display the results
+DF_EAR
+
+
+```
+
+
+Now, we can calculate the NPV for each project by the next formula:
+\[ NPV_i = \sum_{t=0}^{n} \frac{CF_t}{(1+EAR_i)^t} \] 
+
+
+When in t = 0 the receipt is negative and this is the initial investment.
+
+
+\[ NPV_A = -150k + \frac{65k}{(1+EAR_i)^1} + \frac{65k}{(1+EAR_i)^2} + \frac{65k}{(1+EAR_i)^3} \]
+\[ NPV_B = -300k + \frac{110k}{(1+EAR_i)^1} + \frac{120k}{(1+EAR_i)^2} + \frac{130k}{(1+EAR_i)^3} \]
+\[ NPV_C = -30k + \sum_{t=1}^{\infty} \frac{1500}{(1+EAR_i)^{4t}} \]
+
+
+
+```{r, echo=FALSE}
+# Create the NPV function
+NPV <- function(cashflows, discount_rate) {
+  n <- length(cashflows)
+  NPV <- sum(cashflows / (1 + discount_rate)^(0:(n-1)))
+  return(NPV)
+}
+
+# NPV for project A
+CF_A <- c(-150000, 65000, 65000, 65000)
+DR_A_0.01 <- DF_EAR$Project_A_EAR[1]
+DR_A_0.04 <- DF_EAR$Project_A_EAR[2] 
+DR_A_0.09 <- DF_EAR$Project_A_EAR[3]
+DR_A_0.12 <- DF_EAR$Project_A_EAR[4]
+DR_A_0.14 <- DF_EAR$Project_A_EAR[5] 
+
+NPV_A_0.01 <- NPV(CF_A, DR_A_0.01)
+NPV_A_0.04 <- NPV(CF_A, DR_A_0.04)
+NPV_A_0.09 <- NPV(CF_A, DR_A_0.09)
+NPV_A_0.12 <- NPV(CF_A, DR_A_0.12)
+NPV_A_0.14 <- NPV(CF_A, DR_A_0.14)
+
+
+
+# NPV for project B
+CF_B <- c(-300000, 110000, 120000, 130000)
+DR_B_0.01 <- DF_EAR$Project_B_EAR[1]
+DR_B_0.04 <- DF_EAR$Project_B_EAR[2] 
+DR_B_0.09 <- DF_EAR$Project_B_EAR[3] 
+DR_B_0.12 <- DF_EAR$Project_B_EAR[4]
+DR_B_0.14 <- DF_EAR$Project_B_EAR[5] 
+
+NPV_B_0.01 <- NPV(CF_B, DR_B_0.01)
+NPV_B_0.04 <- NPV(CF_B, DR_B_0.04)
+NPV_B_0.09 <- NPV(CF_B, DR_B_0.09)
+NPV_B_0.12 <- NPV(CF_B, DR_B_0.12)
+NPV_B_0.14 <- NPV(CF_B, DR_B_0.14)
+
+
+# NPV for project C
+NPV_C_0.01 <- -30000 + 1500/DF_EAR$Project_C_EAR[1]
+NPV_C_0.04 <- -30000 + 1500/DF_EAR$Project_C_EAR[2]
+NPV_C_0.09 <- -30000 + 1500/DF_EAR$Project_C_EAR[3]
+NPV_C_0.12 <- -30000 + 1500/DF_EAR$Project_C_EAR[4]
+NPV_C_0.14 <- -30000 + 1500/DF_EAR$Project_C_EAR[5]
+
+# Display all NPV values
+DF_NPV <- data.frame(
+  Interest_rates = capitalization_rates,
+  Project_A_NPV = c(NPV_A_0.01, NPV_A_0.04, NPV_A_0.09, NPV_A_0.12, NPV_A_0.14),
+  Project_B_NPV = c(NPV_B_0.01, NPV_B_0.04, NPV_B_0.09, NPV_B_0.12, NPV_B_0.14),
+  Project_C_NPV = c(NPV_C_0.01, NPV_C_0.04, NPV_C_0.09, NPV_C_0.12, NPV_C_0.14)
+)
+
+DF_NPV
+```
+
+
+$$
+$$
+
+
+**1.b.**
+
+The NPV plot for the 3 projects:
+
+
+```{r, echo=FALSE}
+# Create the plot using ggplot
+options(scipen = 999)
+NPV_Plot <- ggplot(DF_NPV, aes(x = Interest_rates)) +
+  geom_line(aes(y = Project_A_NPV, color = "Project A")) +
+  geom_line(aes(y = Project_B_NPV, color = "Project B")) +
+  geom_line(aes(y = Project_C_NPV, color = "Project C")) +
+  scale_color_manual(values = c("Project A" = "magenta", "Project B" = "coral", "Project C" = "navy")) +
+  labs(x = "Discount Rate", y = "NPV", title = "NPV Plot") +
+  theme_minimal()+
+  scale_x_continuous(limits = c(0, 0.15), breaks = c(0.01,0.04,0.09,0.14))+
+  scale_y_continuous(limits = c(-40000, 140000), breaks = c(-20000,0,20000,40000,60000,80000,100000,120000))+
+  theme_bw() +
+  theme(legend.position = "right", axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
+
+# Display the plot
+NPV_Plot
+```
+
+**1.c.**
+
+When the projects are **not** mutually exclusive projects, we will pick the projects that have a positive NPV value and therefore in the case of 4% interest we will pick all projects.
+
+**1.d.**
+
+When the projects are mutually exclusive projects, we will pick the project that has the highest NPV value, and therefore in the case of 4% interest we will pick Project B.
+
+**1.e.**
+
+When the projects are mutually exclusive projects, we will pick the project that has the highest NPV value, and therefore in the case of 12% interest (calculated earlier as well) we will pick Project A.
+
+**1.f.**
+
+If the projects were **not** mutually exclusive projects, in the case of 12% interest we will still pick Project A because the other two projects have negative NPV values.
+
+**1.g.**
+
+When the projects are **not** mutually exclusive projects, we will pick the projects that have a positive NPV value and therefore in the case of 14% interest we won't pick any project.
+
+
+$$
+$$
+
+
+### Question 2
+
+
+**2.a.**
+
+At first,we will extract the relevant data to this question.
+
+The annual rental receipts from the apartment:
+
+```{r, echo=FALSE}
+# Cleaning and displaying the data frame for the change in the price index of apartments owned by tenants.
+DF_Appartments <- read.csv('apparment_index.csv')
+DF_Appartments$Annual_AVG_12 <- as.numeric(gsub(",", "", DF_Appartments$Annual_AVG))
+DF_Appartments$Annual_AVG_12 <- 12*DF_Appartments$Annual_AVG_12 
+DF_Appartments$Annual_AVG <- as.numeric(gsub(",", "", DF_Appartments$Annual_AVG))
+DF_Appartments$Jan_Mar <- as.numeric(gsub(",", "", DF_Appartments$Jan_Mar))
+DF_Appartments$Apr_Jun <- as.numeric(gsub(",", "", DF_Appartments$Apr_Jun))
+DF_Appartments$Jul_Sep <- as.numeric(gsub(",", "", DF_Appartments$Jul_Sep))
+DF_Appartments$Oct_Dec <- as.numeric(gsub(",", "", DF_Appartments$Oct_Dec))
+DF_Appartments <- DF_Appartments[-c(1, 2), ]
+DF_Appartments <-  DF_Appartments[-11,]
+DF_Appartments
+```
+
+The change in the price index of apartments owned by tenants:
+
+
+```{r, echo=FALSE}
+# Displaying the data frame for the annual average rent
+DF_Index <- read.csv('price_index.csv')
+DF_Index
+
+# Defining the change in the price index of apartments from 2012 to 2022
+Change_price <- DF_Index[11,13] / DF_Index[1,2]
+```
+
+
+Now,after we have the data, we will use the apartments data frame to create the payments and receipts table and finally,we will calculate the IRR for the specific case.
+
+The IRR formula is: 
+
+\[ 0 = \sum_{t=0}^{n} \frac{CF_t}{(1+IRR)^t} \]
+
+When in t = 0 the receipt is negative and this is the initial investment.
+
+
+**NOTE**: in the last receipt we need to take into consideration that the apartment was sold so the get the last receipt plus the apartment value according to 2022.
+
+The payments and receipts table:
+
+
+```{r, echo=FALSE}
+# Creating the payments and receipts data frame
+pay_and_rec <- DF_Appartments[,c("Year", "Annual_AVG_12")]
+
+# Changing column name
+
+colnames(pay_and_rec)[colnames(pay_and_rec) == "Annual_AVG_12"] <- "Cash_flows"
+
+
+# Create a new row
+new_row <- data.frame(
+  Year = "Initial investment",
+  Cash_flows = -1000000
+)
+
+
+# Adding the new row to the data frame.
+pay_and_rec_table <- rbind(new_row, pay_and_rec)
+
+# Adjusting the last receipt
+pay_and_rec_table[11,2] <- pay_and_rec_table[11,2] + (Change_price * 1000000)
+
+# Function to convert numbers to ordinal strings
+toOrdinal <- function(x) {
+  if (x %% 100 %in% c(11, 12, 13)) {
+    return(paste(x, "th", sep = ""))
+  } else {
+    last_digit <- x %% 10
+    suffix <- switch(last_digit,
+                     "1" = "st",
+                     "2" = "nd",
+                     "3" = "rd",
+                     "th")
+    return(paste(x, suffix, sep = ""))
+  }
+}
+
+
+# Modify the "Year" column
+for (i in 2:nrow(pay_and_rec_table)) {
+  if (i == 2) {
+    pay_and_rec_table$Year[i] <- paste(pay_and_rec_table$Year[i], "- First receipt")
+  } else {
+    pay_and_rec_table$Year[i] <- paste(pay_and_rec_table$Year[i], "-", toOrdinal(i - 1), "receipt")
+  }
+}
+
+
+# Displaying the payments and receipts data frame
+pay_and_rec_table
+
+# calculate the IRR by the formula above
+IRR <- function(cashflows, initial) {
+  f <- function(x, C, C0) sum(C / (1 + x)^(seq_along(C))) - C0
+  irr <- uniroot(f, interval = c(-1, 1), C = cashflows, C0 = initial)$root
+  irr_percent <- irr * 100
+  return(irr_percent)
+}
+
+CF <- pay_and_rec_table$Cash_flows[2:11]
+II <- -1 * pay_and_rec_table$Cash_flows[1]
+
+# IRR(CF, II)
+
+```
+
+
+The IRR of the investment on the apartment is 10.36227%
+
+
+**2.b.**
+
+
+In order to find the annual return of the loan, we need to use the annuity present value (APV) formula.
+
+
+The annuity present value (APV) formula is given by:
+
+\[
+PV = \frac{{CF \times (1 - (1 + r)^{-n})}}{{r}}
+\]
+
+Where:
+- \(PV\) represents the present value of the loan
+- \(CF\) will be the annual return of the loan
+- \(r\) is the interest rate per year
+- \(t\) is the total number of years
+
+```{r, echo=FALSE}
+PV <- 250000
+r <- 0.055  # 5.5% 
+t <- 10
+
+# Calculate annual return of the loan using the annuity PV formula
+annual_return_loan <- PV * (r / (1 - (1 + r)^(-t)))
+
+# Print the result
+# annual_return_loan
+```
+
+The annual return for the loan is: 33,166.94
+
+
+**2.c.**
+
+we want to find the IRR in the a case where we take a loan for the bank.
+
+in order to do so, we first need to take into consideration that the cash flow that remain ours each year is lower from the previous case due the annual return for the loan.
+
+ 
+
+```{r, echo=FALSE}
+
+# Recalculate given the fact of having an annual loan repayment
+CF_after_loan <- pay_and_rec_table$Cash_flows[2:11] - annual_return_loan
+CF_after_loan_plus_II <- c(-750000,CF_after_loan)
+
+# Displaying the payments and receipts data frame after loan 
+after_loan_table <- data.frame(Year = pay_and_rec_table$Year, CF_after_loan_plus_II)
+after_loan_table
+
+# Defining a initial investment to 750K
+II_after_loan <- 750000
+
+# Using the IRR function that we created earlier
+# IRR(CF_after_loan, II_after_loan)
+```
+
+
+The IRR of the investment in the case of the loan is: 11.09696%
+
+
+As expected, the IRR in the case of the loan is higher then the case of full self funding, and it's because the risk is higher so the reward should be higher.
+
+
+**2.d.**
+
+We extract from the web the date set for the relevant indices:
+
+for the MSCI World - we took from Yahoo! website.
+for the S&P 500 - we took from WSJ website. 
+for the TA125 - we took from TASE website.
+for the TB20 - we took from TASE website.
+
+Now we also take on consideration the dollar exchange rates throughout this years for MSCI World and S&P 500 (taking from  Yahoo! website).
+
+
+```{r, echo=FALSE, warning=FALSE}
+# The dollar exchange rate data from 2012 to 2022
+dollar_exchange <- c(3.754,3.484,3.888,3.896,3.835,3.444,3.726,3.449,3.212,3.104,3.519)
+
+
+# loading the csv files.
+DF_MSCI<- read.csv('MSCI.csv')
+DF_SP500 <- read.csv('SnP500.csv')
+DF_TA125 <- read.csv('TA125.csv')
+DF_TB20 <- read.csv('TB20.csv')
+
+# Turning numeric
+DF_MSCI[,2:7] <- sapply(DF_MSCI[,2:7],as.numeric)
+
+colnames(DF_TA125) <- DF_TA125[2,]
+DF_TA125 <- DF_TA125[-c(1,2),]
+DF_TA125[,2:7] <- sapply(DF_TA125[,2:7],as.numeric)
+
+colnames(DF_TB20) <- DF_TB20[2,]
+DF_TB20 <-DF_TB20[-c(1,2),]
+DF_TB20[,2:7] <- sapply(DF_TB20[,2:7],as.numeric)
+
+```
+
+
+Now we will calculate the regular mean and the geometric mean:
+
+The formula to the regular mean:
+
+\[
+\bar{X} = \frac{{x_1 + x_2 + \ldots + x_n}}{{n}}
+\]
+
+Where:
+- \(x_i\) represents the annual return between successive time periods
+- \(n\) represents the number of periods
+
+
+The formula to the geometric mean:
+
+First we compute the cumulative return for the number of periods  by this formula:
+
+\[
+CR = \left( \prod_{i=1}^{n} (1 + R_i) \right) - 1
+\]
+
+After that, we will put the cumulative return in the geometric mean formula:
+
+\[
+GM = \sqrt[n]{{1+CR}} -1
+\]
+
+Where:
+- \(n\) represents the number of periods
+
+
+**NOTE**: It's the same formula as in the class presentation,and we use for convenience mostly the one from the presentation. 
+
+
+```{r,echo=FALSE}
+# Creating a function for the MSCI regular and geo mean
+Yield_MSCI <- c()
+index_MSCI <- c(1,306,610,914,1218,1521,1825,2129,2434,2739,3047)
+for (i in seq(2,11)){
+   Yield_MSCI <- c(Yield_MSCI,(dollar_exchange[i]*DF_MSCI[index_MSCI[i],]$Adj.Close)/(dollar_exchange[i-1]*DF_MSCI[index_MSCI[i-1],]$Adj.Close))
+}
+
+
+reg_mean_MSCI <- mean(Yield_MSCI-1)*100 
+geo_mean_MSCI <- (((DF_MSCI$Adj.Close[3047]*dollar_exchange[11])/ (DF_MSCI$Adj.Close[1]*dollar_exchange[1]))^(1/10)-1)*100
+
+
+# Creating a function for the S&P 500 regular and geo mean
+Yield_SP500 <- c()
+index_SP500 <- c(2519,2267,2015,1763,1511,1260,1009,757,504,252,1)
+for (i in seq(2,11)){
+   Yield_SP500 <- c(Yield_SP500,(dollar_exchange[i]*DF_SP500[index_SP500[i],]$Close)/(dollar_exchange[i-1]*DF_SP500[index_SP500[i-1],]$Close))
+}
+
+
+reg_mean_SP500 <- mean(Yield_SP500-1)*100 
+geo_mean_SP500 <- (((DF_SP500$Close[1]*dollar_exchange[11])/ (DF_SP500$Close[2519]*dollar_exchange[1]))^(1/10)-1)*100
+
+
+# Creating a function for the TA125 regular and geo mean
+Yield_TA125 <- c()
+index_TA125 <- c(2450,2206,1961,1716,1471,1226,981,737,489,245,1)
+for (i in seq(2,11)){
+   Yield_TA125 <- c(Yield_TA125,DF_TA125[index_TA125[i],4]/DF_TA125[index_TA125[i-1],4])
+}
+  
+reg_mean_TA125 <- mean(Yield_TA125-1)*100 
+geo_mean_TA125 <- ((DF_TA125[,4][1]/DF_TA125[,4][2450])^(1/10)-1)*100
+
+
+
+# Creating a function for the TB20 regular and geo mean
+Yield_TB20 <- c()
+index_TB20 <- c(2450,2206,1961,1716,1471,1226,981,737,489,245,1)
+for (i in seq(2,11)){
+   Yield_TB20 <- c(Yield_TB20,DF_TB20[index_TB20[i],4]/DF_TB20[index_TB20[i-1],4])
+}
+  
+reg_mean_TB20 <- mean(Yield_TB20-1)*100 
+geo_mean_TB20 <- ((DF_TB20[,4][1]/DF_TB20[,4][2450])^(1/10)-1)*100
+
+
+# A table that display all the means
+Mean_table <- data.frame(Reg_mean = c(reg_mean_MSCI,reg_mean_SP500,reg_mean_TA125,reg_mean_TB20), Geo_mean = c(geo_mean_MSCI,geo_mean_SP500,geo_mean_TA125,geo_mean_TB20))
+rownames(Mean_table) <- c("MSCI","S&P 500","TA125","TB20")
+Mean_table
+
+
+```
+
+
+
+**2.e.**
+
+When comparing section a results to section d results, we can see that the IRR of the apartment investment is higher then any of the geometric mean of the stocks.
+
+A possible conclusion suggests that the project has performed better in terms of returns compared to the broad market indices. This can be a positive sign for investing in the project.
+
+
+
+**2.f.**
+
+To sum up our findings,it appears that in the last 10 years, the housing market was (on average) more profitable compared to the broad market indices.   
+
+In other words,it means that as an investor, in terms of Expected Return,
+the housing market in Israel is "the place to be".
+
+
+Regarding the trade-off between risk and return, we would like to balance between the potential gain and the level of uncertainty or potential loss associated with an investment.
+higher returns are expected from investments with higher levels of risk(due the compensation for taking on additional risk).
+
+When it comes to dispersion, it's usually refers to the volatility of investment returns.investments with higher dispersion typically have the potential for both higher returns and higher losses.
+As an investors, we need to define to our self the level of of risk aversion we want regardless to the investment, and according to that, manege the dispersion in their portfolio.
+
+
+When it comes to Liquidity. it's usually refers ease with which an investment can be bought or sold without significantly impacting its price. investments that are highly liquid can be easily converted into cash with minimal loss in value.
+Generally, more liquid investments tend to have lower returns compared to less liquid investments.This is because investors demand a higher return for investments that are less liquid and may carry additional transaction costs or risks.
+As an investors,In times of market stress or unexpected events, the ability to quickly sell an investment can be crucial to minimize losses. 
+
+
+### Question 3
+
+**3.a**
+
+For question 3, we chose the Strauss stock and the Hilan stock.
+
+We believe that because they came from different sectors and have different CEO,
+their correlation we be relatively low.
+
+we will calculate the monthly return over the 60 months that ended in 2021:
+
+The monthly return over the 60 months of Strauss stock:
+
+```{r,echo=FALSE,warning=FALSE}
+# Cleaning and displaying the data frame for Strauss and Hilan stocks
+DF_Strauss <- read.csv('STRS.TA.csv')
+DF_Hilan <- read.csv('HLAN.TA.csv')
+
+# Turning numeric 
+DF_Strauss[,2:7] <- sapply(DF_Strauss[,2:7],as.numeric)
+DF_Hilan[,2:7] <- sapply(DF_Hilan[,2:7],as.numeric)
+
+
+# Creating a function for the Strauss stock reg mean by month
+Yield_Strauss <- c()
+index_Strauss <- c(1,24,44,65,82,101,122,144,166,184,203,225,246,269,289,310,332,355,375,398,420,441,464,485,507,530,550,571,593,615,636,659,680,699,715,735,758,780,800,821,837,857,878,899,921,940,961,983,1006,1027,1047,1068,1087,1107,1129,1149,1172,1185,1206,1228,1249)
+for (i in seq(2,61)){
+   Yield_Strauss <- c(Yield_Strauss,DF_Strauss[index_Strauss[i],]$Adj.Close/DF_Strauss[index_Strauss[i-1],]$Adj.Close)
+}
+
+Yield_Strauss
+```
+
+
+The monthly return over the 60 months of Hilan stock:
+
+
+```{r,echo=FALSE}
+# Creating a function for the Hilan stock reg mean by month
+Yield_Hilan <- c()
+index_Hilan <- c(1,24,44,65,82,101,122,144,166,184,203,225,246,269,289,310,332,355,375,398,420,441,464,485,507,530,550,571,593,615,636,659,680,699,715,735,758,780,800,821,837,857,878,899,921,940,961,983,1006,1027,1047,1068,1087,1107,1129,1149,1172,1185,1206,1228,1249)
+for (i in seq(2,61)){
+   Yield_Hilan <- c(Yield_Hilan, DF_Hilan[index_Hilan[i],]$Adj.Close/DF_Hilan[index_Hilan[i-1],]$Adj.Close)
+}
+
+
+Yield_Hilan
+```
+
+
+**3.b**
+
+Now, we will compute regular mean and the geometric mean by month:
+
+**NOTE** : we will use the same formulas as in question 2 section d
+
+```{r,echo=FALSE}
+# Comuting the means
+geo_mean_month_Strauss <- (((DF_Strauss$Adj.Close[1249])/ (DF_Strauss$Adj.Close[1]))^(1/60)-1)*100
+
+reg_mean_month_Strauss <- mean(Yield_Strauss-1)*100
+geo_mean_month_Hilan <- (((DF_Hilan$Adj.Close[1249])/ (DF_Hilan$Adj.Close[1]))^(1/60)-1)*100
+reg_mean_month_Hilan <- mean(Yield_Hilan-1)*100
+```
+
+
+The monthly average return on Strauss stock by geo mean is: `r geo_mean_month_Strauss`%
+
+The monthly average return on Strauss stock by reg mean is: `r reg_mean_month_Strauss`%
+
+The monthly average return on Hilan stock by geo mean is: `r geo_mean_month_Hilan`%
+
+The monthly average return on Hilan stock by reg mean is: `r reg_mean_month_Hilan`%
+
+
+**3.c**
+
+We will calculate the SD for each of the stocks:
+
+
+
+```{r ,echo=FALSE} 
+# calculate the SD for each of the stocks:
+SD_Yield_Strauss<- sd(Yield_Strauss)
+SD_Yield_Hilan<- sd(Yield_Hilan)
+```
+
+
+The SD for Strauss stock = `r sd(Yield_Strauss)`
+The SD for Hilan stock = `r sd(Yield_Hilan)`
+
+
+**3.d**
+
+We will calculate the correlation between the stocks:
+
+```{r, echo=FALSE}
+# calculate the correlation between the stocks:
+cor_Hilan_Strauss<- cor(Yield_Hilan,Yield_Strauss)
+```
+
+
+The correlation between the stocks: `r cor(Yield_Hilan,Yield_Strauss)`
+
+
+**3.e**
+
+Now, we will create the "The Efficient Frontier".
+
+To do so, we will need to began by finding the set of all the investment opportunities (including the short positions).
+
+for that, we will use the geometric mean and the SD of each of the stocks to define our Expected portfolio return vector and the SD of the portfolio vector,
+and therefore, creating the set of all the investment opportunities (including the short positions).
+
+```{r , echo=FALSE}
+
+geo_avg <- c(geo_mean_month_Strauss, geo_mean_month_Hilan)  
+sd <- c(SD_Yield_Strauss, SD_Yield_Hilan)      
+
+# Generate a sequence of weights for the first stock
+weights_stock_Strauss <- seq(-1, 2, 0.01)
+
+# Calculate the corresponding weights for the second stock
+weights_stock_Hilan <- 1 - weights_stock_Strauss
+
+# Calculate the portfolio returns
+portfolio_returns <- geo_avg[1] * weights_stock_Strauss + geo_avg[2] * weights_stock_Hilan
+
+# Calculate the portfolio standard deviations
+portfolio_sd <- sqrt((weights_stock_Strauss * sd[1])^2 + (weights_stock_Hilan * sd[2])^2 + (2 * cor_Hilan_Strauss * weights_stock_Strauss * sd[1] * weights_stock_Hilan * sd[2]))
+
+# Create a data frame with the portfolio returns and standard deviations
+portfolio_data <- data.frame(Return = portfolio_returns, SD = portfolio_sd)
+
+portfolio_data <- cbind(portfolio_data, weights_stock_Hilan, weights_stock_Strauss)
+
+#
+ggplot(portfolio_data) +
+  geom_point(aes(SD,Return/100), size = 0.7) +
+  geom_point(aes(portfolio_data[which.min(abs(portfolio_data$SD)),][[2]], portfolio_data[which.min(abs(portfolio_data$SD)),][[1]]/100, color = "red"), size = 3) +
+  annotate("text", color = "dodgerblue", x = portfolio_data[which.min(abs(portfolio_data$SD)),][[2]] + 0.01, y = portfolio_data[which.min(abs(portfolio_data$SD)),][[1]]/100, label = "MVP ") +
+  theme(legend.position = "none") +
+  scale_y_continuous(labels = scales :: percent) +
+  labs(title = "", y = "Expected Return") +
+  geom_point(aes(portfolio_data[which(portfolio_data$weights_stock_Hilan == 1),][[2]], portfolio_data[which(portfolio_data$weights_stock_Hilan == 1),][[1]]/100, color = "blue"), size = 3) +
+  annotate("text", color = "coral", x = portfolio_data[which(portfolio_data$weights_stock_Hilan == 1),][[2]] + 0.01, y = portfolio_data[which(portfolio_data$weights_stock_Hilan == 1),][[1]]/100, label = "Hilan ") +
+  geom_point(aes(portfolio_data[which(portfolio_data$weights_stock_Strauss == 1),][[2]], portfolio_data[which(portfolio_data$weights_stock_Strauss == 1),][[1]]/100, color = "green"), size = 3) +
+  annotate("text", color = "springgreen4",  x = portfolio_data[which(portfolio_data$weights_stock_Strauss == 1),][[2]] + 0.01, y = portfolio_data[which(portfolio_data$weights_stock_Strauss == 1),][[1]]/100, label = "Strauss ")
+```
+
+
+As we can see in the plot,"The Efficient Frontier" is all the points in the plot that are above the MVP point (the green one).
+
+And of curse, the Hilan short positions is **below** the blue point (Strauss),
+and the Strauss short positions is **above**  the orange point (Hilan)
+
+
+**3.f**
+
+
+As you can see, we already computed the MVP and added it to the plot.
+
+we USE the weights of the MVP formula to extract the MVP:
+
+\[
+w_1 = \frac{{\sigma_{2}^2 -\rho_{1,2} \sigma_{1}\sigma_{2}}}{{\sigma_{1}^2 + \sigma_{2}^2 - 2\rho_{1,2}\sigma_{1}\sigma_{2}}}
+\]
+
+\[
+w_2 = 1 - w_1
+\]
+
+Where:
+
+\(w_1\) is the weight of stock 1 of the MVP,
+\(\sigma_{1}^2\) is the variance of stock 1,
+\(\sigma_{2}^2\) is the variance of stock 2, and
+\(\rho_{1,2}\) is the Pearson's correlation coefficient
+
+
+```{r , echo=FALSE}
+MVP_weights_stock_Strauss <- 
+  (sd[2]^2 - cor_Hilan_Strauss*sd[1]*sd[2])/(sd[1]^2+sd[2]^2 - 2* cor_Hilan_Strauss*sd[1]*sd[2])*100
+
+MVP_weights_stock_Hilan <- 
+  (sd[1]^2 - cor_Hilan_Strauss*sd[1]*sd[2])/(sd[1]^2+sd[2]^2 - 2* cor_Hilan_Strauss*sd[1]*sd[2]) * 100
+```
+
+
+The MVP weight for Strauss is: `r MVP_weights_stock_Strauss `%
+
+The MVP weight for Hilan is: `r MVP_weights_stock_Hilan `%
+
+
+**3.g**
+
+In order to find the "The New Effective Frontier",given an annually risk free
+rate of 3%, we will: 
+calculate the Sharpe ratio for each of the points.
+find the highest Sharpe ratio is the touching point (Portfolio Tangency).
+creating a linear line from the risk-free interest rate to the launch point.
+
+
+```{r , echo=FALSE , warning=FALSE}
+Rf <- (1.03)^(1/12)-1
+
+portfolio_data$sharp_ratio <- (((portfolio_data$Return/100) - Rf) / portfolio_data$SD)
+MSR<- max(portfolio_data$sharp_ratio)
+
+ggplot(portfolio_data) +
+  geom_point(aes(SD,Return/100), size = 0.7) +
+  geom_point(aes(portfolio_data[which.min(abs(portfolio_data$SD)),][[2]], portfolio_data[which.min(abs(portfolio_data$SD)),][[1]]/100, color = "red"), size = 3) +
+  annotate("text", color = "springgreen4",  x = portfolio_data[which.min(abs(portfolio_data$SD)),][[2]] + 0.01, y = portfolio_data[which.min(abs(portfolio_data$SD)),][[1]]/100, label = "MVP ") +
+  theme(legend.position = "none") +
+  scale_y_continuous(labels = scales :: percent) +
+  labs(title = "", y = "Expected Return") +
+  geom_point(aes(portfolio_data[which(portfolio_data$weights_stock_Hilan == 1),][[2]], portfolio_data[which(portfolio_data$weights_stock_Hilan == 1),][[1]]/100, color = "dodgerblue"), size = 3) +
+  annotate("text", color = "coral", x = portfolio_data[which(portfolio_data$weights_stock_Hilan == 1),][[2]] + 0.01, y = portfolio_data[which(portfolio_data$weights_stock_Hilan == 1),][[1]]/100, label = "Hilan ") +
+  geom_point(aes(portfolio_data[which(portfolio_data$weights_stock_Strauss == 1),][[2]], portfolio_data[which(portfolio_data$weights_stock_Strauss == 1),][[1]]/100, color = "springgreen4"), size = 3) +
+  annotate("text", color = "dodgerblue", x = portfolio_data[which(portfolio_data$weights_stock_Strauss == 1),][[2]] + 0.01, y = portfolio_data[which(portfolio_data$weights_stock_Strauss == 1),][[1]]/100, label = "Strauss ")+ geom_abline(slope = 0.3192646, intercept = 0.0025, color = "red", linetype = "dashed", size = 0.7)+
+  geom_point(aes(0.04789899, 0.01779245), color = "purple", size = 3) +
+  annotate("text", x = 0.04789899+0.0062, y = 0.01779245, label = "Tangency Portfolio", color = "purple", hjust = 0)
+
+
+
+```
+
+
+The values in the Portfolio Tangency point is:
+
+The Expected Portfolio return is: `r portfolio_data$Return[136]`
+
+The SD of the Portfolio  is: `r portfolio_data$SD[136]`
+
+The weight for Strauss is: 35%
+
+The weight for Hilan is: 65%
+
+The Shrap Ratio is: 0.3199688
+
+
+**3.h**
+
+
+To our third stock we chose Azorim-Investment, Development & Construction Co. Ltd (AZRM.TA).
+
+The monthly return over the 60 months of Azorim stock:
+
+```{r ,echo=FALSE,warning=FALSE}
+
+DF_AZRM <- read.csv('AZRM.TA.csv')
+
+DF_AZRM[,2:7] <- sapply(DF_AZRM[,2:7],as.numeric)
+
+Yield_AZRM <- c()
+index_AZRM <- c(1,24,44,65,82,101,122,144,166,184,203,225,246,269,289,310,332,355,375,398,420,441,464,485,507,530,550,571,593,615,636,659,680,699,715,735,758,780,800,821,837,857,878,899,921,940,961,983,1006,1027,1047,1068,1087,1107,1129,1149,1172,1185,1206,1228,1249)
+for (i in seq(2,61)){
+   Yield_AZRM <- c(Yield_AZRM,DF_AZRM[index_AZRM[i],]$Adj.Close/DF_AZRM[index_AZRM[i-1],]$Adj.Close)
+}
+
+Yield_AZRM
+```
+
+
+We will compute all of the requested statistical data:
+
+
+```{r ,echo=FALSE,warning=FALSE}
+geo_mean_month_AZRM <- (((DF_AZRM$Adj.Close[1249])/ (DF_AZRM$Adj.Close[1]))^(1/60)-1)*100
+
+reg_mean_month_AZRM <- mean(Yield_AZRM-1)*100
+
+
+SD_Yield_AZRM<- sd(Yield_AZRM)
+
+cor_Hilan_AZRM<- cor(Yield_Hilan,Yield_AZRM)
+cor_Strauss_AZRM<- cor(Yield_Strauss,Yield_AZRM)
+```
+
+
+The monthly average return on Azorim stock by geo mean is: `r geo_mean_month_AZRM`%
+
+The monthly average return on Azorim stock by reg mean is: `r reg_mean_month_AZRM`%
+
+The SD for Azorim stock = `r sd(Yield_AZRM)`
+
+The correlation between Hilan and Azorim is: `r cor(Yield_Hilan,Yield_AZRM)`
+
+The correlation between Strauss and Azorim is: `r cor(Yield_Strauss,Yield_AZRM)`
+
+
+
+**3.i**
+
+To compute this section we needed to use a lot of "tricks" in linear algebra (multiply by the inverse of the co-variances matrix and in general a lot of algebra multiplication.)
+
+we followed the steps from the presentation and we hope that we got the right answer:
+
+Regarding the Sharp ratio, we didn't improve the sharp ratio **although we know** that in most cases, when you increase the diversity of portfolio by adding another stock, the sharp ratio should increase (When the correlation between the stocks are relatively low).
+
+
+
+```{r ,echo=FALSE,warning=FALSE}
+# Step 1: Define expected returns and covariance matrix
+expected_returns_3I <- c(geo_mean_month_Strauss/100, geo_mean_month_Hilan/100, geo_mean_month_AZRM/100)
+
+covariance_matrix_3I <- matrix(c(SD_Yield_Strauss^2, cor_Hilan_Strauss, cor_Strauss_AZRM,
+                                cor_Hilan_Strauss, SD_Yield_Hilan^2, cor_Hilan_AZRM,
+                                cor_Strauss_AZRM, cor_Hilan_AZRM, SD_Yield_AZRM^2), nrow = 3)
+
+# Step 2: Calculate tangency portfolio weights
+n_assets <- length(expected_returns_3I)
+
+A <- cbind(rep(1, n_assets), expected_returns_3I)
+b <- c(1,0)
+C <- 2 * covariance_matrix_3I
+
+# Solve for tangency portfolio weights
+tangency_weights <- solve(t(C), A) %*% b
+
+# Normalize the weights
+tangency_weights <- tangency_weights / sum(tangency_weights)
+
+# Step 3: Determine risk-free interest rate
+risk_free_rate <- 0.03  # Replace with your own risk-free interest rate
+
+# Step 4: Compute expected return and standard deviation of tangency portfolio
+tangency_return <- t(tangency_weights) %*% expected_returns_3I
+tangency_sd <- sqrt(t(tangency_weights) %*% covariance_matrix_3I %*% tangency_weights)
+
+# Define stock names
+stock_names <- c("Strauss", "Hilan", "Azorim")
+
+# Calculate Sharpe ratio
+sharpe_ratio <- (tangency_return - risk_free_rate) / tangency_sd
+
+# Print the results with stock names
+cat("Tangency Portfolio Weights:\n")
+for (i in 1:length(stock_names)) {
+  cat(stock_names[i], ":", tangency_weights[i], "\n")
+}
+
+cat("Tangency Portfolio Expected Return:", tangency_return, "\n")
+cat("Tangency Portfolio Standard Deviation:", tangency_sd, "\n")
+cat("Sharpe Ratio:", sharpe_ratio, "\n")
+
+```
+
+
+
+
+### Question 4
+
+
+**4.a**
+
+For this question we chose this 4 USA stocks:
+
+Apple - tech sector
+Coca Cola - food and consumption sector
+Walt Disney - entertainment sector
+Abbott Laboratories - health care sector
+
+For the estimated market portfolio we will use the S&P 500 index
+
+For the estimated risk free rate we will take the
+USA government daily treasury bonds.
+
+For conveniences,we will create 2 data frame for each 6 elements above:
+
+one data frame for the In Sample (2013-2017),
+and the other for the Out Sample (2018-2022)
+
+
+**4.b**
+
+
+**NOTE**: At the end, we will display all the relevant statistic
+in a organize table.
+
+First, we will extract the data:
+
+The Apple In Sample data (adjusted price monthly returns):
+
+```{r ,echo=FALSE,warning=FALSE}
+# load the Apple IN data
+DF_AAPL_IN <- read.csv('AAPL.IN.csv')
+DF_AAPL_IN[,2:7] <- sapply(DF_AAPL_IN[,2:7],as.numeric)
+
+Yield_AAPL_IN <- c()
+index_AAPL_IN <- seq(1:61)
+for (i in seq(2,61)){
+   Yield_AAPL_IN <- c(Yield_AAPL_IN,DF_AAPL_IN[index_AAPL_IN[i],]$Adj.Close/DF_AAPL_IN[index_AAPL_IN[i-1],]$Adj.Close)
+}
+
+Yield_AAPL_IN
+
+geo_mean_month_AAPL_IN <- (((DF_AAPL_IN$Adj.Close[61])/ (DF_AAPL_IN$Adj.Close[1]))^(1/60)-1)*100
+
+reg_mean_month_AAPL_IN <- mean(Yield_AAPL_IN-1)*100
+
+
+SD_Yield_AAPL_IN<- sd(Yield_AAPL_IN)
+
+```
+
+
+
+
+The Apple Out Sample data (adjusted price monthly returns):
+
+```{r ,echo=FALSE,warning=FALSE}
+# load the Apple Out data
+DF_AAPL_OUT <- read.csv('AAPL.OUT.csv')
+DF_AAPL_OUT[,2:7] <- sapply(DF_AAPL_OUT[,2:7],as.numeric)
+
+Yield_AAPL_OUT <- c()
+index_AAPL_OUT <- seq(1:61)
+for (i in seq(2,61)){
+   Yield_AAPL_OUT <- c(Yield_AAPL_OUT,DF_AAPL_OUT[index_AAPL_OUT[i],]$Adj.Close/DF_AAPL_OUT[index_AAPL_OUT[i-1],]$Adj.Close)
+}
+
+Yield_AAPL_OUT
+
+geo_mean_month_AAPL_OUT <- (((DF_AAPL_OUT$Adj.Close[61])/ (DF_AAPL_OUT$Adj.Close[1]))^(1/60)-1)*100
+
+reg_mean_month_AAPL_OUT <- mean(Yield_AAPL_OUT-1)*100
+
+
+SD_Yield_AAPL_OUT<- sd(Yield_AAPL_OUT)
+```
+
+
+The Coca Cola In Sample data (adjusted price monthly returns):
+
+
+```{r ,echo=FALSE,warning=FALSE}
+# load the Coca Cola IN data
+DF_COLA_IN <- read.csv('COLA.IN.csv')
+DF_COLA_IN[,2:7] <- sapply(DF_COLA_IN[,2:7],as.numeric)
+
+Yield_COLA_IN <- c()
+index_COLA_IN <- seq(1:61)
+for (i in seq(2,61)){
+   Yield_COLA_IN <- c(Yield_COLA_IN,DF_COLA_IN[index_COLA_IN[i],]$Adj.Close/DF_COLA_IN[index_COLA_IN[i-1],]$Adj.Close)
+}
+
+Yield_COLA_IN
+
+geo_mean_month_COLA_IN <- (((DF_COLA_IN$Adj.Close[61])/ (DF_COLA_IN$Adj.Close[1]))^(1/60)-1)*100
+
+reg_mean_month_COLA_IN <- mean(Yield_COLA_IN-1)*100
+
+
+SD_Yield_COLA_IN<- sd(Yield_COLA_IN)
+
+```
+
+
+The Coca Cola Out Sample data (adjusted price monthly returns):
+
+
+```{r ,echo=FALSE,warning=FALSE}
+# load the Coca Cola OUT data
+DF_COLA_OUT <- read.csv('COLA.OUT.csv')
+DF_COLA_OUT[,2:7] <- sapply(DF_COLA_OUT[,2:7],as.numeric)
+
+Yield_COLA_OUT <- c()
+index_COLA_OUT <- seq(1:61)
+for (i in seq(2,61)){
+   Yield_COLA_OUT <- c(Yield_COLA_OUT,DF_COLA_OUT[index_COLA_OUT[i],]$Adj.Close/DF_COLA_OUT[index_COLA_OUT[i-1],]$Adj.Close)
+}
+
+Yield_COLA_OUT
+
+geo_mean_month_COLA_OUT <- (((DF_COLA_OUT$Adj.Close[61])/ (DF_COLA_OUT$Adj.Close[1]))^(1/60)-1)*100
+
+reg_mean_month_COLA_OUT <- mean(Yield_COLA_OUT-1)*100
+
+
+SD_Yield_COLA_OUT<- sd(Yield_COLA_OUT)
+
+```
+
+
+The Walt Disney In Sample data (adjusted price monthly returns):
+
+
+```{r ,echo=FALSE,warning=FALSE}
+# load the Walt Disney IN data
+DF_DIS_IN <- read.csv('DIS.IN.csv')
+DF_DIS_IN[,2:7] <- sapply(DF_DIS_IN[,2:7],as.numeric)
+
+Yield_DIS_IN <- c()
+index_DIS_IN <- seq(1:61)
+for (i in seq(2,61)){
+   Yield_DIS_IN <- c(Yield_DIS_IN,DF_DIS_IN[index_DIS_IN[i],]$Adj.Close/DF_DIS_IN[index_DIS_IN[i-1],]$Adj.Close)
+}
+
+Yield_DIS_IN
+
+geo_mean_month_DIS_IN <- (((DF_DIS_IN$Adj.Close[61])/ (DF_DIS_IN$Adj.Close[1]))^(1/60)-1)*100
+
+reg_mean_month_DIS_IN <- mean(Yield_DIS_IN-1)*100
+
+
+SD_Yield_DIS_IN<- sd(Yield_DIS_IN)
+
+```
+
+
+The Walt Disney Out Sample data (adjusted price monthly returns):
+
+
+```{r ,echo=FALSE,warning=FALSE}
+# load the Walt Disney OUT data
+DF_DIS_OUT <- read.csv('DIS.OUT.csv')
+DF_DIS_OUT[,2:7] <- sapply(DF_DIS_OUT[,2:7],as.numeric)
+
+Yield_DIS_OUT <- c()
+index_DIS_OUT <- seq(1:61)
+for (i in seq(2,61)){
+   Yield_DIS_OUT <- c(Yield_DIS_OUT,DF_DIS_OUT[index_DIS_OUT[i],]$Adj.Close/DF_DIS_OUT[index_DIS_OUT[i-1],]$Adj.Close)
+}
+
+Yield_DIS_OUT
+
+geo_mean_month_DIS_OUT <- (((DF_DIS_OUT$Adj.Close[61])/ (DF_DIS_OUT$Adj.Close[1]))^(1/60)-1)*100
+
+reg_mean_month_DIS_OUT <- mean(Yield_DIS_OUT-1)*100
+
+
+SD_Yield_DIS_OUT<- sd(Yield_DIS_OUT)
+
+```
+
+
+The Abbott Laboratories In Sample data (adjusted price monthly returns):
+
+
+```{r ,echo=FALSE,warning=FALSE}
+# load the Abbott Laboratories IN data
+DF_ABT_IN <- read.csv('ABT.IN.csv')
+DF_ABT_IN[,2:7] <- sapply(DF_ABT_IN[,2:7],as.numeric)
+
+Yield_ABT_IN <- c()
+index_ABT_IN <- seq(1:61)
+for (i in seq(2,61)){
+   Yield_ABT_IN <- c(Yield_ABT_IN,DF_ABT_IN[index_ABT_IN[i],]$Adj.Close/DF_ABT_IN[index_ABT_IN[i-1],]$Adj.Close)
+}
+
+Yield_ABT_IN
+
+geo_mean_month_ABT_IN <- (((DF_ABT_IN$Adj.Close[61])/ (DF_ABT_IN$Adj.Close[1]))^(1/60)-1)*100
+
+reg_mean_month_ABT_IN <- mean(Yield_ABT_IN-1)*100
+
+
+SD_Yield_ABT_IN<- sd(Yield_ABT_IN)
+
+```
+
+
+The Abbott Laboratories Out Sample data (adjusted price monthly returns):
+
+
+```{r ,echo=FALSE,warning=FALSE}
+# load the Abbott Laboratories OUT data
+DF_ABT_OUT <- read.csv('ABT.OUT.csv')
+DF_ABT_OUT[,2:7] <- sapply(DF_ABT_OUT[,2:7],as.numeric)
+
+Yield_ABT_OUT <- c()
+index_ABT_OUT <- seq(1:61)
+for (i in seq(2,61)){
+   Yield_ABT_OUT <- c(Yield_ABT_OUT,DF_ABT_OUT[index_ABT_OUT[i],]$Adj.Close/DF_ABT_OUT[index_ABT_OUT[i-1],]$Adj.Close)
+}
+
+Yield_ABT_OUT
+
+geo_mean_month_ABT_OUT <- (((DF_ABT_OUT$Adj.Close[61])/ (DF_ABT_OUT$Adj.Close[1]))^(1/60)-1)*100
+
+reg_mean_month_ABT_OUT <- mean(Yield_ABT_OUT-1)*100
+
+
+SD_Yield_ABT_OUT<- sd(Yield_ABT_OUT)
+
+```
+
+
+The estimated risk free rate In Sample data (adjusted price monthly returns):
+
+
+```{r ,echo=FALSE,warning=FALSE}
+# load the estimated risk free rate IN data
+DF_BONDS_IN <- read.csv('BONDS.IN.csv')
+DF_BONDS_IN$Monthly_Return <- DF_BONDS_IN$Monthly_Return +1 
+
+Yield_BONDS_IN <- c()
+index_BONDS_IN <- seq(1:61)
+for (i in seq(2,61)){
+   Yield_BONDS_IN <- c(Yield_BONDS_IN,DF_BONDS_IN[index_BONDS_IN[i],]$Monthly_Return/DF_BONDS_IN[index_BONDS_IN[i-1],]$Monthly_Return)
+}
+
+Yield_BONDS_IN
+
+geo_mean_month_BONDS_IN <- (((DF_BONDS_IN$Monthly_Return[61])/ (DF_BONDS_IN$Monthly_Return[1]))^(1/60)-1)*100
+
+reg_mean_month_BONDS_IN <- mean(Yield_BONDS_IN-1)*100
+
+
+SD_Yield_BONDS_IN<- sd(Yield_BONDS_IN)
+
+```
+
+
+The estimated risk free rate OUT Sample data (adjusted price monthly returns):
+
+
+```{r ,echo=FALSE,warning=FALSE}
+# load the estimated risk free rate OUT data
+DF_BONDS_OUT <- read.csv('BONDS.OUT.csv')
+DF_BONDS_OUT$Monthly_Return <- DF_BONDS_OUT$Monthly_Return +1
+
+Yield_BONDS_OUT <- c()
+index_BONDS_OUT <- seq(1:61)
+for (i in seq(2,61)){
+   Yield_BONDS_OUT <- c(Yield_BONDS_OUT,DF_BONDS_OUT[index_BONDS_OUT[i],]$Monthly_Return/DF_BONDS_OUT[index_BONDS_OUT[i-1],]$Monthly_Return)
+}
+
+Yield_BONDS_OUT
+
+geo_mean_month_BONDS_OUT <- (((DF_BONDS_OUT$Monthly_Return[61])/ (DF_BONDS_OUT$Monthly_Return[1]))^(1/60)-1)*100
+
+reg_mean_month_BONDS_OUT <- mean(Yield_BONDS_OUT-1)*100
+
+
+SD_Yield_BONDS_OUT<- sd(Yield_BONDS_OUT)
+
+```
+
+
+The estimated market portfolio In Sample data (adjusted price monthly returns):
+
+
+```{r ,echo=FALSE,warning=FALSE}
+# load the estimated market portfolio IN data
+DF_SPY_IN <- read.csv('SPY.IN.csv')
+DF_SPY_IN[,2:7] <- sapply(DF_SPY_IN[,2:7],as.numeric)
+
+Yield_SPY_IN <- c()
+index_SPY_IN <- seq(1:61)
+for (i in seq(2,61)){
+   Yield_SPY_IN <- c(Yield_SPY_IN,DF_SPY_IN[index_SPY_IN[i],]$Adj.Close/DF_SPY_IN[index_SPY_IN[i-1],]$Adj.Close)
+}
+
+Yield_SPY_IN
+
+geo_mean_month_SPY_IN <- (((DF_SPY_IN$Adj.Close[61])/ (DF_SPY_IN$Adj.Close[1]))^(1/60)-1)*100
+
+reg_mean_month_SPY_IN <- mean(Yield_SPY_IN-1)*100
+
+
+SD_Yield_SPY_IN<- sd(Yield_SPY_IN)
+
+```
+
+
+The estimated market portfolio Out Sample data (adjusted price monthly returns):
+
+
+```{r ,echo=FALSE,warning=FALSE}
+# load the estimated market portfolio OUT data
+DF_SPY_OUT <- read.csv('SPY.OUT.csv')
+DF_SPY_OUT[,2:7] <- sapply(DF_SPY_OUT[,2:7],as.numeric)
+
+Yield_SPY_OUT <- c()
+index_SPY_OUT <- seq(1:61)
+for (i in seq(2,61)){
+   Yield_SPY_OUT <- c(Yield_SPY_OUT,DF_SPY_OUT[index_SPY_OUT[i],]$Adj.Close/DF_SPY_OUT[index_SPY_OUT[i-1],]$Adj.Close)
+}
+
+Yield_SPY_OUT
+
+geo_mean_month_SPY_OUT <- (((DF_SPY_OUT$Adj.Close[61])/ (DF_SPY_OUT$Adj.Close[1]))^(1/60)-1)*100
+
+reg_mean_month_SPY_OUT <- mean(Yield_SPY_OUT-1)*100
+
+
+SD_Yield_SPY_OUT<- sd(Yield_SPY_OUT)
+
+```
+
+
+Finally,we will display all the relevant statistic
+in a organize table:
+
+**NOTE**: the means is in %. all the data is "month" units.
+
+
+```{r ,echo=FALSE,warning=FALSE}
+stats_table <- matrix(NA, nrow = 12, ncol = 3)
+colnames(stats_table) <- c("Geometric mean", "Regular mean", "SD")
+
+# Assign data to the table
+stats_table[, 1] <- c(geo_mean_month_AAPL_IN, geo_mean_month_AAPL_OUT, geo_mean_month_COLA_IN, geo_mean_month_COLA_OUT,
+                      geo_mean_month_DIS_IN, geo_mean_month_DIS_OUT, geo_mean_month_ABT_IN, geo_mean_month_ABT_OUT,
+                      geo_mean_month_BONDS_IN, geo_mean_month_BONDS_OUT, geo_mean_month_SPY_IN, geo_mean_month_SPY_OUT)
+
+stats_table[, 2] <- c(reg_mean_month_AAPL_IN, reg_mean_month_AAPL_OUT, reg_mean_month_COLA_IN, reg_mean_month_COLA_OUT,
+                      reg_mean_month_DIS_IN, reg_mean_month_DIS_OUT, reg_mean_month_ABT_IN, reg_mean_month_ABT_OUT,
+                      reg_mean_month_BONDS_IN, reg_mean_month_BONDS_OUT, reg_mean_month_SPY_IN, reg_mean_month_SPY_OUT)
+
+stats_table[, 3] <- c(SD_Yield_AAPL_IN, SD_Yield_AAPL_OUT, SD_Yield_COLA_IN, SD_Yield_COLA_OUT, SD_Yield_DIS_IN,
+                      SD_Yield_DIS_OUT, SD_Yield_ABT_IN, SD_Yield_ABT_OUT, SD_Yield_BONDS_IN, SD_Yield_BONDS_OUT,
+                      SD_Yield_SPY_IN, SD_Yield_SPY_OUT)
+
+# Set row names
+rownames(stats_table) <- c("Apple IN", "Apple OUT", "Coca Cola IN", "Coca Cola OUT", "Walt Disney IN", "Walt Disney OUT",
+                           "Abbott IN", "Abbott OUT", "Risk Free Rate IN", "Risk Free Rate OUT", "Market Portfolio IN",
+                           "Market Portfolio OUT")
+
+# Print the results
+stats_table
+
+```
+
+
+**4.c**
+
+In this section we need to find the \(\beta\) for each of the 4 stock in the years 2013 - 2017 (In Sample).
+
+In order to do so, we will create 4 linear regression one for each stock, by taking the excess return of the stock (as Y) and the excess return of the Market portfolio (as X).
+
+```{r ,echo=FALSE,warning=FALSE}
+# Apple IN regression
+regression_AAPL_IN_beta <- lm((Yield_AAPL_IN - Yield_BONDS_IN)~(Yield_SPY_IN-Yield_BONDS_IN))
+
+AAPL_IN_beta <- coef(regression_AAPL_IN_beta)[2]
+
+# Coca cola IN regression
+regression_COLA_IN_beta <- lm((Yield_COLA_IN - Yield_BONDS_IN)~(Yield_SPY_IN-Yield_BONDS_IN))
+
+COLA_IN_beta <- coef(regression_COLA_IN_beta)[2]
+
+# Walt Disney IN regression
+regression_DIS_IN_beta <- lm((Yield_DIS_IN - Yield_BONDS_IN)~(Yield_SPY_IN-Yield_BONDS_IN))
+
+DIS_IN_beta <- coef(regression_DIS_IN_beta)[2]
+
+# Abbott IN regression
+regression_ABT_IN_beta <- lm((Yield_ABT_IN - Yield_BONDS_IN)~(Yield_SPY_IN-Yield_BONDS_IN))
+
+ABT_IN_beta <- coef(regression_ABT_IN_beta)[2]
+
+# Display the results 
+beta_IN_table <- matrix(NA, nrow = 1, ncol = 4)
+
+# Assign the values to the table
+beta_IN_table[1, 1] <- AAPL_IN_beta
+beta_IN_table[1, 2] <- COLA_IN_beta
+beta_IN_table[1, 3] <- DIS_IN_beta
+beta_IN_table[1, 4] <- ABT_IN_beta
+
+# Set the row and column names
+rownames(beta_IN_table) <- "Estimated In Sample beta"
+colnames(beta_IN_table) <- c("Apple", "Coca cola", "Walt Disney", "Abbott")
+
+# Print the table
+print(beta_IN_table)
+
+```
+
+
+**4.d**
+
+Now that we have the \(\beta\), we want to check if the excess return of the stocks in the In Sample period can really predict the excess return of the stocks in the Out Sample period.
+
+In order to do so, we will use the SML equation:
+
+The Security Market Line (SML) equation is given by:
+
+\[ E(R_i) = R_f + \beta_i \times (E(R_m) - R_f) \]
+
+
+where:
+- \( E(R_i) \) represents the expected return of stock \( i \).
+- \( R_f \) is the risk-free rate of return.
+- \( \beta_i \) denotes the beta coefficient of stock \( i \), which measures its sensitivity to the market.
+- \( E(R_m) \) is the expected return of the market.
+
+
+The Apple estimated expected return:
+
+```{r ,echo=FALSE,warning=FALSE}
+AAPL_exp_return <- Yield_BONDS_OUT + AAPL_IN_beta * (Yield_SPY_OUT - Yield_BONDS_OUT)
+
+DF_AAPL_OUT$AAPL_exp_return[2:61] <- AAPL_exp_return
+
+AAPL_exp_return
+```
+
+
+The Coca cola estimated expected return:
+
+
+```{r ,echo=FALSE,warning=FALSE}
+COLA_exp_return <- Yield_BONDS_OUT + COLA_IN_beta * (Yield_SPY_OUT - Yield_BONDS_OUT)
+
+DF_COLA_OUT$COLA_exp_return[2:61] <- COLA_exp_return
+
+COLA_exp_return
+```
+
+
+The Walt Disney estimated expected return:
+
+
+```{r ,echo=FALSE,warning=FALSE}
+DIS_exp_return <- Yield_BONDS_OUT + DIS_IN_beta * (Yield_SPY_OUT - Yield_BONDS_OUT)
+
+DF_DIS_OUT$DIS_exp_return[2:61] <- DIS_exp_return
+
+DIS_exp_return
+```
+
+
+The Abbott estimated expected return:
+
+```{r ,echo=FALSE,warning=FALSE}
+ABT_exp_return <- Yield_BONDS_OUT + ABT_IN_beta * (Yield_SPY_OUT - Yield_BONDS_OUT)
+
+DF_ABT_OUT$ABT_exp_return[2:61] <- ABT_exp_return
+
+ABT_exp_return
+```
+
+
+**4.e**
+
+
+We need to compare the estimated expected return for each stock in the OUT sample to the "real life" return for each stock.
+
+We will Present the comparison in scatter plots.each stock will have 2 scatter plots:
+
+one for the estimated expected return (on the left) and one for the "real life" return (on the right).
+
+**NOTE** : we believe that a good comparison will be to check each of the situation against the Market expected return (As a base case) while knowing the limitations of the **linear** estimate.
+
+
+For the Apple stock:
+
+```{r ,echo=FALSE,warning=FALSE}
+
+DF_SPY_OUT$Yield_SPY_OUT[2:61] <- Yield_SPY_OUT
+
+
+DF_AAPL_PLOT <- cbind(DF_AAPL_OUT$AAPL_exp_return[2:61], DF_SPY_OUT$Yield_SPY_OUT[2:61],Yield_AAPL_OUT)
+
+
+
+colnames(DF_AAPL_PLOT) <- c("AAPL_exp_return", "Yield_SPY_OUT","Yield_AAPL_OUT")
+
+DF_AAPL_PLOT <- as.data.frame(DF_AAPL_PLOT)
+
+
+AAPL_exp_return_plot <- ggplot(DF_AAPL_PLOT,aes(x = DF_AAPL_PLOT$Yield_SPY_OUT, y = DF_AAPL_PLOT$AAPL_exp_return)) +
+    geom_point() + xlab("Market Excess Return ") + ylim(0.75,
+    1.25) + ylab("Apple estimated expected return")
+
+
+
+AAPL_real_return_plot <- ggplot(DF_AAPL_PLOT,aes(x = DF_AAPL_PLOT$Yield_SPY_OUT, y = DF_AAPL_PLOT$Yield_AAPL_OUT)) +
+    geom_point() + xlab("Market Excess Return ") + ylim(0.75,
+    1.25) + ylab("Apple real life return return")
+
+AAPL_real_return_plot <- AAPL_real_return_plot +
+  geom_smooth(method = "lm", se = FALSE)
+
+
+
+# Arrange the two plots in a grid with two columns
+grid.arrange(AAPL_exp_return_plot,AAPL_real_return_plot, ncol = 2)
+```
+
+
+For the Coca cola stock:
+
+
+```{r ,echo=FALSE,warning=FALSE}
+
+DF_COLA_PLOT <- cbind(DF_COLA_OUT$COLA_exp_return[2:61], DF_SPY_OUT$Yield_SPY_OUT[2:61],Yield_COLA_OUT)
+
+colnames(DF_COLA_PLOT) <- c("COLA_exp_return", "Yield_SPY_OUT","Yield_COLA_OUT")
+
+DF_COLA_PLOT <- as.data.frame(DF_COLA_PLOT)
+
+
+COLA_exp_return_plot <- ggplot(DF_COLA_PLOT,aes(x = DF_COLA_PLOT$Yield_SPY_OUT, y = DF_COLA_PLOT$COLA_exp_return)) +
+    geom_point() + xlab("Market Excess Return ") + ylim(0.75,
+    1.25) + ylab("Coca cola estimated expected return")
+
+
+
+COLA_real_return_plot <- ggplot(DF_COLA_PLOT,aes(x = DF_COLA_PLOT$Yield_SPY_OUT, y = DF_COLA_PLOT$Yield_COLA_OUT)) +
+    geom_point() + xlab("Market Excess Return ") + ylim(0.75,
+    1.25) + ylab("Coca cola real life return return")
+
+COLA_real_return_plot <- COLA_real_return_plot +
+  geom_smooth(method = "lm", se = FALSE)
+
+
+
+# Arrange the two plots in a grid with two columns
+grid.arrange(COLA_exp_return_plot,COLA_real_return_plot, ncol = 2)
+```
+
+
+For the Walt Disney stock:
+
+
+```{r ,echo=FALSE,warning=FALSE}
+
+DF_DIS_PLOT <- cbind(DF_DIS_OUT$DIS_exp_return[2:61], DF_SPY_OUT$Yield_SPY_OUT[2:61],Yield_DIS_OUT)
+
+colnames(DF_DIS_PLOT) <- c("DIS_exp_return", "Yield_SPY_OUT","Yield_DIS_OUT")
+
+DF_DIS_PLOT <- as.data.frame(DF_DIS_PLOT)
+
+
+DIS_exp_return_plot <- ggplot(DF_DIS_PLOT,aes(x = DF_DIS_PLOT$Yield_SPY_OUT, y = DF_DIS_PLOT$DIS_exp_return)) +
+    geom_point() + xlab("Market Excess Return ") + ylim(0.75,
+    1.25) + ylab("Walt Disney estimated expected return")
+
+
+
+DIS_real_return_plot <- ggplot(DF_DIS_PLOT,aes(x = DF_DIS_PLOT$Yield_SPY_OUT, y = DF_DIS_PLOT$Yield_DIS_OUT)) +
+    geom_point() + xlab("Market Excess Return ") + ylim(0.75,
+    1.25) + ylab("Walt Disney real life return return")
+
+DIS_real_return_plot <- DIS_real_return_plot +
+  geom_smooth(method = "lm", se = FALSE)
+
+
+
+# Arrange the two plots in a grid with two columns
+grid.arrange(DIS_exp_return_plot,DIS_real_return_plot, ncol = 2)
+```
+
+
+For the Abbott stock:
+
+
+```{r ,echo=FALSE,warning=FALSE}
+
+DF_ABT_PLOT <- cbind(DF_ABT_OUT$ABT_exp_return[2:61], DF_SPY_OUT$Yield_SPY_OUT[2:61],Yield_ABT_OUT)
+
+colnames(DF_ABT_PLOT) <- c("ABT_exp_return", "Yield_SPY_OUT","Yield_ABT_OUT")
+
+DF_ABT_PLOT <- as.data.frame(DF_ABT_PLOT)
+
+
+ABT_exp_return_plot <- ggplot(DF_ABT_PLOT,aes(x = DF_ABT_PLOT$Yield_SPY_OUT, y = DF_ABT_PLOT$ABT_exp_return)) +
+    geom_point() + xlab("Market Excess Return ") + ylim(0.75,
+    1.25) + ylab("Abbott estimated expected return")
+
+
+
+ABT_real_return_plot <- ggplot(DF_ABT_PLOT,aes(x = DF_ABT_PLOT$Yield_SPY_OUT, y = DF_ABT_PLOT$Yield_ABT_OUT)) +
+    geom_point() + xlab("Market Excess Return ") + ylim(0.75,
+    1.25) + ylab("Abbott real life return return")
+
+ABT_real_return_plot <- ABT_real_return_plot +
+  geom_smooth(method = "lm", se = FALSE)
+
+
+
+# Arrange the two plots in a grid with two columns
+grid.arrange(ABT_exp_return_plot,ABT_real_return_plot, ncol = 2)
+```
+
+
+**4.f**
+
+To sum up our empirical findings, it seems that the \(\beta\) estimation is a pretty good linear estimator for predicting the "behavior" of the stocks relative to the Market and also relative to them self throughout the years.
+
+**NOTE** :An interesting case will be the Abbott stock which has a relatively large divination form the estimation.it could be from all sort of reasons:
+change in administration, the effect of Covid (Abbott is in the health care sector) and so on.
+
+
+### Question 5
+
+
+**5.a**
+
+For the equally weighted ETF we chose:
+
+Invesco S&P 500 Equal Weight ETF (RSP).
+
+```{r ,echo=FALSE,warning=FALSE}
+DF_ETF_500 <- read.csv("ETF.500.csv")
+```
+
+
+**5.b**
+
+We will like to check if the saying in the article is true.
+
+As requested, we will observed 2 parameters: Sharp ratio and \(\alpha\) estimation.
+
+We will began with the Sharp Ratio, and find it for the regular S&P 500 ETF and for the equal weights S&P 500 ETF.
+
+The Sharpe ratio formula:
+
+\[ Sharpe Ratio = \frac{{E(R_p - R_f)}}{{\sigma_p}} \]
+
+where:
+- \( R_p \) represents the **monthly** expected return of the S&P 500 ETF.
+- \( R_f \) is the **monthly** risk-free rate of return.
+- \( \sigma_p \) denotes the standard deviation of the S&P 500 ETF returns.
+
+
+```{r ,echo=FALSE,warning=FALSE}
+DF_ETF_500[,2:7] <- sapply(DF_ETF_500[,2:7],as.numeric)
+
+Yield_ETF_500 <- c()
+index_ETF_500 <- seq(1:61)
+for (i in seq(2,61)){
+   Yield_ETF_500 <- c(Yield_ETF_500,DF_ETF_500[index_ETF_500[i],]$Adj.Close/DF_ETF_500[index_ETF_500[i-1],]$Adj.Close)
+}
+
+Yield_ETF_500
+
+geo_mean_month_ETF_500 <- (((DF_ETF_500$Adj.Close[61])/ (DF_ETF_500$Adj.Close[1]))^(1/60)-1)*100
+
+reg_mean_month_ETF_500 <- mean(Yield_ETF_500-1)*100
+
+
+SD_Yield_ETF_500<- sd(Yield_ETF_500)
+
+# Sharp ratio for the ETF  S&P 500 equal weights 
+Sharp_ratio_ETF_500 <- ((geo_mean_month_ETF_500/100) - (geo_mean_month_BONDS_OUT/100)) / SD_Yield_ETF_500
+
+# Sharp ratio for the ETF S&P 500 regular weights
+Sharp_ratio_SP_500 <- ((geo_mean_month_SPY_OUT/100) - (geo_mean_month_BONDS_OUT/100)) / SD_Yield_SPY_OUT
+
+```
+
+
+The Sharp ratio for the ETF  S&P 500 equal weights is: `r Sharp_ratio_ETF_500`
+
+The Sharp ratio for the ETF S&P 500 regular weights is: `r Sharp_ratio_SP_500`
+
+
+
+Now, we would like to estimate the \(\alpha\) by an OLS linear regression:
+
+```{r ,echo=FALSE,warning=FALSE}
+alpha_for_ETF <- lm ((Yield_ETF_500 - Yield_BONDS_OUT)~(Yield_SPY_OUT - Yield_BONDS_OUT))
+
+summary(alpha_for_ETF)
+
+```
+
+We got that the estimated \(\alpha\) for the ETF  S&P 500 equal weights is: -1.06654.
+
+The p-value for this \(\alpha\) is 0.0000000000000002 Which means it is statistically significant.
+
+Therefore, we can conclude that the actual return is lower than the return estimated by the CAPM, which indicate that active fund managers will not want to buy this ETF, and if they holding it, they will probably want to sale it.
+
+
+**5.c**
+
+Another ETF we would like to explore is Invesco NASDAQ Internet ETF (PNQI).
+
+This ETF main holdings is in the Communication Services sector (36.89%)
+and the Technology sector (32.31%) and include companies like: 
+Meta Platforms Inc Class A, Microsoft Corp, Amazon.com Inc.
+
+First, we will find the Sharp Ratio:
+
+```{r ,echo=FALSE,warning=FALSE}
+DF_PNQI <- read.csv("PNQI.csv")
+
+DF_PNQI[,2:7] <- sapply(DF_PNQI[,2:7],as.numeric)
+
+Yield_PNQI <- c()
+index_PNQI <- seq(1:61)
+for (i in seq(2,61)){
+   Yield_PNQI <- c(Yield_PNQI,DF_PNQI[index_PNQI[i],]$Adj.Close/DF_PNQI[index_PNQI[i-1],]$Adj.Close)
+}
+
+Yield_PNQI
+
+geo_mean_month_PNQI <- (((DF_PNQI$Adj.Close[61])/ (DF_PNQI$Adj.Close[1]))^(1/60)-1)*100
+
+reg_mean_month_PNQI <- mean(Yield_PNQI-1)*100
+
+
+SD_Yield_PNQI<- sd(Yield_PNQI)
+
+# Sharp ratio for the Invesco NASDAQ Internet ETF
+Sharp_ratio_PNQI <- ((geo_mean_month_PNQI/100) - (geo_mean_month_BONDS_OUT/100)) / SD_Yield_PNQI
+
+```
+
+
+The Sharp ratio for the Invesco NASDAQ Internet ETF: `r Sharp_ratio_PNQI`
+
+Now, we would like to estimate the \(\alpha\) by an OLS linear regression:
+
+```{r ,echo=FALSE,warning=FALSE}
+alpha_for_PNQI <- lm ((Yield_PNQI - Yield_BONDS_OUT)~(Yield_SPY_OUT - Yield_BONDS_OUT))
+
+summary(alpha_for_PNQI)
+
+```
+
+
+We got that the estimated \(\alpha\) for the Invesco NASDAQ Internet ETF is: -1.1056.
+
+The p-value for this \(\alpha\) is 0.00000000000000362 Which means it is statistically significant.
+
+Therefore, similar to the case of the equal weights S&P 500 ETF we can conclude that the actual return is lower than the return estimated by the CAPM, which indicate that active fund managers will not want to buy this ETF, and if they holding it, they will probably want to sale it.
+
+
+**5.d**
+
+The difference between the two parameters is that the Sharpe Ratio provides an indication of how well an investment compensates for the level of risk taken.
+Alpha, on the other hand,represents the excess return of the investment after accounting for the risk **associated with the benchmark**.
+
+There could be many reason why an ETF would not beat the market.
+In our case we believe that there is an important role to active fund managers in setting the distribution of weights with a relevance to the market.
+
+Moreover, in the ETF that we selected, we could see vary clearly that asset diversification plays a major role in selecting ETF.
+Although it is an ETF and is supposed to be less risky, investing in an ETF that has a broad share of very similar sectors can pose a lot of risk to investors
+
+
+
+### Question 6
+
+The anomaly is: The Turn of the Month Effect
+
+Reference: Investigating the Turn of the Month effect: Evidence from International Financial Markets, by Samuel Tabot Enow, Research Associate, The IIE Vega School, South Africa. 
+
+link to the article:
+
+**https://profesionalmudacendekia.com/index.php/jbmr/article/view/658/313**
+
+
+**6.a**
+
+
+The Turn of the Month Effect is an anomaly in financial markets where stock prices tend to increase during the last few days of the month and the first few days of the following month. This effect is observed across different stock markets globally and has been documented for several decades.
+
+The anomaly is in contrast to the efficient market hypothesis and the random walk theory, which suggest that stock prices should follow a random pattern and that it is impossible to predict future movements in financial markets.
+
+**6.b**
+
+
+One strategy that can be used to achieve excess returns for an investment portfolio is to buy stocks at the end of the month and sell them at the beginning of the following month.
+
+This strategy takes advantage of the Turn of the Month Effect, which suggests that stock prices tend to increase during this period.
+
+However, it is important to note that this strategy may not always be profitable, as the effect may not be present in all months or in all stock markets. Additionally, transaction costs and other market frictions may reduce the profitability of this strategy.
+
+
+
+### Question 7
+
+
+**7.a**
+
+In order to compute the price per share of the company,we will need to do a few steps:
+
+First we want to find the \(\beta\) of the company.
+the \(\beta\) of the company will be calculated using a weighted average of the betas estimated for each from the company's activities. The weighting will be done using the company's income.
+
+we extract the betas estimated for each from the company's activities for the website that we incounter in class:
+
+**https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/Betas.html**
+
+The estimated betas:
+
+
+Computer Services - 1.17
+Information services - 1.40
+Software (System & Application) - 1.47
+
+
+```{r ,echo=FALSE,warning=FALSE}
+east_cost_beta <-  1.17 * (180/360) + 1.4 * (60/360) + 1.47 * (120/360)
+```
+
+The \(\beta\) for the East Cost company is: `r east_cost_beta`
+
+
+The second step is to calculate the price for capital (K) by the formula:
+
+\[
+K = {E(R_i)} = R_f + \beta \times ({E(R_m)} - R_f)
+\]
+
+
+**NOTE**: We will use the annual geometric mean for the last 5 year of the S&P 500 for the \({E(R_m)}\) and of course for the \({R_f}\).
+
+
+```{r ,echo=FALSE,warning=FALSE}
+
+geo_mean_annual_SP500 <- (((DF_SPY_OUT$Adj.Close[61])/ (DF_SPY_OUT$Adj.Close[1]))^(1/5)-1)*100
+
+geo_mean_annual_rf <- (((DF_BONDS_OUT$Monthly_Return[61])/ (DF_BONDS_OUT$Monthly_Return[1]))^(1/5)-1)*100
+
+
+K <- geo_mean_annual_rf + east_cost_beta * (geo_mean_annual_SP500 - geo_mean_annual_rf)
+```
+
+
+The price for capital (K) for the East Cost company is : `r K`%
+
+
+Now, from the sixth year, the company is expected to distribute 80% of its profits as a dividend.therefore the we can compute the growth rate of the company by this simple formula:
+
+\[
+g = ROE \times Plowback Ratio 
+\]
+
+In our case the growth rate of the company is 2%.
+
+
+Now, the final step according to the Gordon model, the company's stock price is calculated by this formula:
+
+According to the Gordon model, the company's stock price formula:
+
+\[
+\text{Stock Price(P0)} = \frac{{\text{Dividends per Share}}}{{\text{Required Rate of Return(K)} - \text{Dividend Growth Rate(g)}}}
+\]
+
+
+```{r ,echo=FALSE,warning=FALSE}
+g <- 0.02
+price_share_estimated <- (0.8 * 25)/((K/100) - g)
+```
+
+The calculated price per stock of the East Cost company is: `r price_share_estimated ` 
+
+
+**7.b**
+
+
+According to our result, we would suggest to the investments fund to participate in the IPO because we got a higher price from the estimation then the actual price, which indicate short pricing of the company's share price. 
+
+
+**7.c**
+
+
+If we want to calculate the company value after the IPO, we need to take under consideration that the company **already** has 10 millions shares and added 40 more in the IPO. so the company value is:
+
+50 millions shares * 155 dollars (price per share) = $7,750,000,000
+
+
+To compute the P/E Ratio we will use this formula:
+
+\[
+ P/E  Ratio = \frac{ \text{Market Price} }{ \text{Revenue} }
+\]
+
+So in our case the P/E Ratio is : 
+
+50 millions shares * 155 dollars (price per share) / 80 millions dollars (Revenue) = 96.875
+
+
+
+To compute the P/S Ratio we will use this formula:
+
+\[
+ P/S  Ratio = \frac{ \text{Market Price} }{ \text{Sales} }
+\]
+
+So in our case the P/S Ratio is :
+
+50 millions shares * 155 dollars (price per share)/ 360 millions dollars (Sales)=  21.52778
+
+
+
+### Question 8
+
+
+
+**8.a** 
+
+
+We been requested to Compile in a table the statistics of the IPOs (according to the number of issues and the amount raised),
+In the last 5 years.
+
+We will do so, by extracting manually the relevant data according to the like that's been given to us:
+
+Amount Raised (Overall IPO) - AR.Ov.IPO
+
+Amount Raised (New companies) - AR.NC
+
+Number of IPO (Overall IPO) - Num.IPO.Ov.IPO
+
+Number of IPO (New companies) - Num.IPO.NC
+
+
+**NOTE** : The "Amount Raised" parameter is in millions of shekels. 
+
+```{r ,echo=FALSE,warning=FALSE}
+IPO_STAT <- read.csv("Draft.csv")
+IPO_STAT
+```
+
+
+We believe that a major factor that contributed to the wave of IPOs in 2021 was the low interest rate.
+Central banks around the world implemented monetary stimulus measures to support economies during the pandemic, which resulted in low interest rates.
+This made it attractive for companies to go public and access capital from investors who were seeking higher returns than those offered by traditional fixed-income investments.
+
+
+In our opinions, Regarding the sectoral aspect , We think that the tech sector played a significant role in the wave of IPOs in 2021.
+The pandemic increased the demand for technology-driven solutions.
+Many tech companies experienced rapid growth and as a result, they chose to go public to raise funds for expansion, product development, and acquisitions.  
+
+
+
+**8.b**
+
+
+First, we will explain and display our 6 chosen stocks that did an IPO in 2021:
+
+**1.Impacx.Io Ltd (IMPC.TA) - from the tech sector**.
+
+Date of the IPO according to the MAYA website : 02/09/2021
+
+Date with first data on it from Yahoo website : 13/09/2021
+
+
+
+```{r ,echo=FALSE,warning=FALSE}
+# for the Impacx stock
+DF_IMPC <- read.csv("IMPC.TA.csv")
+cumulative_return_IMPC <- ((DF_IMPC$Adj.Close[429]/DF_IMPC$Adj.Close[1])-1)*100
+annual__return_IMPC <- ((DF_IMPC$Adj.Close[317]/DF_IMPC$Adj.Close[73])-1)*100 
+
+```
+
+
+The cumulative return for the Impacx stock is: -86.52027%
+
+The annual return for the Impacx stock in 2022 is: -76.77482%
+
+
+**2.Bareket Capital Ltd (BRKT.TA) - from the financial services sector**.
+
+Date of the IPO according to the MAYA website : 07/07/2021
+
+Date with first data on it from Yahoo website : 13/07/2021
+
+
+```{r ,echo=FALSE,warning=FALSE}
+# for the Bareket stock
+DF_Bareket <- read.csv("BRKT.TA.csv")
+cumulative_return_Bareket <- ((DF_Bareket$Adj.Close[469]/DF_Bareket$Adj.Close[1])-1)*100
+annual__return_Bareket <- ((DF_Bareket$Adj.Close[357]/DF_Bareket$Adj.Close[113])-1)*100 
+
+```
+
+
+The cumulative return for the Bareket stock is: -53.71506%
+
+The annual return for the Bareket stock in 2022 is: -41.0119%
+
+
+**3.Sufrin Holdings Ltd. (SFRN.TA) - from the Real estate and construction sector**.
+
+Date of the IPO according to the MAYA website : 08/11/2021
+
+Date with first data on it from Yahoo website : 11/11/2021
+
+
+```{r ,echo=FALSE,warning=FALSE}
+# for the Sufrin stock
+DF_SFRN <- read.csv("SFRN.TA.csv")
+cumulative_return_SFRN <- ((DF_SFRN$Adj.Close[392]/DF_SFRN$Adj.Close[1])-1)*100
+annual__return_SFRN <- ((DF_SFRN$Adj.Close[280]/DF_SFRN$Adj.Close[36])-1)*100 
+
+```
+
+
+The cumulative return for the Sufrin stock is: -37.28548%
+
+The annual return for the Sufrin stock in 2022 is: -45.98827%
+
+
+**4.Rav-Bariach (08) Industries Ltd. (BRIH.TA) - from the industry sector**.
+
+Date of the IPO according to the MAYA website : 25/08/2021
+
+Date with first data on it from Yahoo website : 30/08/2021
+
+
+```{r ,echo=FALSE,warning=FALSE}
+# for the Rav-Bariach stock
+DF_BRIH <- read.csv("BRIH.TA.csv")
+cumulative_return_BRIH <- ((DF_BRIH$Adj.Close[436]/DF_BRIH$Adj.Close[1])-1)*100
+annual__return_BRIH <- ((DF_BRIH$Adj.Close[324]/DF_BRIH$Adj.Close[80])-1)*100 
+
+```
+
+
+The cumulative return for the Rav-Bariach stock is: -53.19721%
+
+The annual return for the Rav-Bariach stock in 2022 is: -27.93881%
+
+
+**5.PlantArc Bio Ltd. (PLNT.TA) - from the bio-med sector**.
+
+Date of the IPO according to the MAYA website : 03/01/2021
+
+Date with first data on it from Yahoo website : 11/01/2021
+
+
+```{r ,echo=FALSE,warning=FALSE}
+# for the PlantArc stock
+DF_PLNT <- read.csv("PLNT.TA.csv")
+cumulative_return_PLNT <- ((DF_PLNT$Adj.Close[594]/DF_PLNT$Adj.Close[1])-1)*100
+annual__return_PLNT <- ((DF_PLNT$Adj.Close[482]/DF_PLNT$Adj.Close[238])-1)*100 
+
+```
+
+
+The cumulative return for the PlantArc stock is: -71.44512%
+
+The annual return for the PlantArc stock in 2022 is: 5.279257%
+
+
+**6.Aluma Infrastructure Fund (2020) Ltd (ALUMA.TA) - from the investment and holdings sector**.
+
+Date of the IPO according to the MAYA website : 10/11/2021
+
+Date with first data on it from Yahoo website : 18/11/2021
+
+
+```{r ,echo=FALSE,warning=FALSE}
+# for the Aluma stock
+DF_ALUMA <- read.csv("ALUMA.TA.csv")
+cumulative_return_ALUMA <- ((DF_ALUMA$Adj.Close[387]/DF_ALUMA$Adj.Close[1])-1)*100
+annual__return_ALUMA <- ((DF_ALUMA$Adj.Close[275]/DF_ALUMA$Adj.Close[31])-1)*100 
+
+```
+
+
+The cumulative return for the Aluma stock is: -73.94958%
+
+The annual return for the Aluma stock in 2022 is: -67.8194%
+
+
+**8.c**
+
+For each of the stocks we would like to compute their ROE.
+The way to do so, is to take the Net profit of the year 2022 and divide it with the Company equity of the year 2021: 
+
+
+```{r ,echo=FALSE,warning=FALSE}
+Impacx_ROE <- (-5895/8742)*100
+Bareket_Capital_ROE <- (11711/83246)*100
+Sufrin_ROE <- (24583/120934)*100
+RavBariach_ROE <- (30572/87388)*100
+PlantArc_ROE <- (-4982/17716)*100
+Aluma_ROE <- (-33542/324800)*100
+```
+
+The ROE for the Impacx stock is: -67.43308%
+
+The ROE for the Bareket Capital stock is: 14.06794%
+
+The ROE for the Sufrin stock is: 20.32762%
+
+The ROE for the Rav-Bariach stock is: 34.98421%
+
+The ROE for the PlantArc stock is: -28.12147%
+
+The ROE for the Aluma stock is: -10.32697%
+
+
+**8.d**
+
+Now we will compute the correlation between the ROE of the IPO stocks and their annual return.
+
+
+```{r ,echo=FALSE,warning=FALSE}
+ROE_vector <-c(Impacx_ROE,Bareket_Capital_ROE,Sufrin_ROE,RavBariach_ROE,PlantArc_ROE,Aluma_ROE)
+
+annual_vector <- c(annual__return_IMPC,annual__return_Bareket,annual__return_SFRN,annual__return_BRIH,annual__return_PLNT,annual__return_ALUMA)
+
+corr_ROE_annual <-  cor(ROE_vector,annual_vector)
+
+plot(ROE_vector/100 , annual_vector/100, xlab = "ROE", ylab = "Annual Return", main = "Scatter Plot")
+
+```
+
+
+The correlation between the ROE of the IPO stocks and their annual return is: 0.3064468
+
+
+We got that  correlation between the ROE of the IPO stocks and their annual return is mid-low positive.
+We believe that it makes sense because when you look "fresh" IPOs, it's reasonable to think that their ROE mite be a little unstable, due to the active and rapid changes in the company equity.
+
+We think that if we will do the same process with companies with with more experience in the market, the correlation will be closer to 1.
+
+
+
+### Question 9
+
+**NOTE** :
+
+All the calculations for sub-sections a,c of this question will be in Excel for convenience.
+
+We will explain every step here, and write the numbers and results.
+
+
+**9.a**
+
+
+We been requested to select 2 bonds from the TA Stock Exchange.
+One with a shorter "Average Bond Duration" (maham), and one with a longer "Average Bond Duration".
+
+For the shorter one we selected :
+
+Eldan Transport bond 6 - Average Bond Duration is 1.91
+
+For the longer one we selected :
+
+I.C.L bond 7 - Average Bond Duration is 8.39
+
+Now, we find the YTM for each bond:
+
+The Yield to Maturity (YTM) of a bond can be calculated using the following formula:
+
+
+\[
+Price = \frac{C}{(1 + YTM)^1} + \frac{C}{(1 + YTM)^2} + \ldots + \frac{C}{(1 + YTM)^T} + \frac{F}{(1 + YTM)^T}
+\]
+
+
+Where:
+- \(YTM\) represents the yield to maturity.
+- \(C\) is the annual coupon payment.
+- \(F\) is the face value of the bond.
+- \(P\) is the purchase price or current market price of the bond.
+- \(T\) is the number of years to maturity.
+
+
+After calculations in Excel we got:
+
+The YTM of Eldan Transport bond 6 is: 5.86%
+
+The YTM of I.C.L bond 7 is: 4.82%
+
+
+**9.b**
+
+We want to Calculate the change in bond prices from the beginning of 2022 until today.
+So we will take the price of the bond today and divide it by the price of the bond in the start of 2022, and of curse, subtract 1 and multiply by 100 to get a present:
+
+
+Today bond price of Eldan Transport bond 6 is (18/06/2023): 95.75
+
+2022 bond price of Eldan Transport bond 6 is (03/01/2022): 98.16
+
+The change in bond price of Eldan Transport bond 6 is: -2.4551752%
+
+
+Today bond price of I.C.L bond 7 is (18/06/2023): 82.85
+
+2022 bond price of I.C.L bond 7 is (02/01/2022): 96.82
+
+The change in bond price of I.C.L bond 7 is: -14.428837%
+
+
+**9.c**
+
+We will Calculate approximately the rise of a risk-free interest rate from 2022 until today, derived from the yield curve, suitable for each of the bonds.
+
+We extract the yield curve for an Excel file and marked the relevant number that we used:
+
+the rise of a risk-free interest rate For the Eldan Transport bond 6 (marked in blue in the Excel) is: 5,871.42857%
+
+the rise of a risk-free interest rate For the I.C.L bond 7 (marked in green in the Excel) is: 218.333%
+
+
+In general, we would expect the a bond with a longer Average Bond Duration will face a more dramatic changes in the price because of the risk-free interest.
+In our case, we saw something different.
+The YTM of the shorter Average Bond Duration bonds increased more,so it effect the sensitivity of the price more then the longer one. 
+
+
+**9.d**
+
+We will Calculate (according to the linear approximation we learned) the yield to maturity of the bonds that was
+in early 2022.
+
+The linear approximation formula is:
+
+
+\[
+\Delta P \approx -\frac{DUR}{(1 + Y)}\times P \times \Delta Y
+\]
+
+Where:
+- \(\Delta P\) represents the change in bond price.
+- \(P\) is the current bond price.
+- \({DUR}\) is the Average Bond Duration.
+- \(\Delta Y\) denotes the change in yield.
+- \(Y\) denotes the YTM
+
+
+We need to extract Y in each case:
+
+```{r ,echo=FALSE,warning=FALSE}
+linear_prox_Eldan <- (-1 - ((1.91*95.75*-2.4551752)/58.71))
+linear_prox_ICL <- (-1 -((8.39*82.85*-14.428837)/2183.33))
+```
+
+
+The linear approximation for the YTM of Eldan Transport bond 6 is: 6.647906%
+
+The linear approximation for the YTM of I.C.L bond 7 is: 3.59374% 
+
+The difference between the to YTM for the  Eldan Transport bond 6 is: -0.787906%
+
+The difference between the to YTM for the I.C.L bond 7 is : 1.22626%
+
+
+**9.e**
+
+We Know that the linear approximation assumes that the change in bond prices is solely due to the change in the risk-free interest rate.
+We think it neglects other factors such as changes in credit risk or liquidity risk.
+Therefore, the difference we find in Section D may not entirely reflect the change in the risk-free interest rate.
+
+We believe that assuming that the risk has not changed is a reasonable assumption when using the linear approximation but, in the "real world" the assumption is often not accurate.
+
+
+
