@@ -1,0 +1,10 @@
+*_cache/
+*_files/
+*.knit.md
+*.aux
+*.out
+*.log
+*.tex
+.Rhistory
+.RData
+.Rproj.user/

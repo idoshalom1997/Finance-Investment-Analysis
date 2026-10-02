@@ -1,5 +1,5 @@
 ---
-title: "Financing Submission Exercise"
+title: "Corporate Finance & Investments Analysis"
 author: "Ido Shalom"
 date: "21-06-2023"
 output:
@@ -14,7 +14,6 @@ knitr::opts_chunk$set(echo = TRUE)
 # Clear desk
 rm(list=ls())
 
-# setwd("C:\\Users\\X\\Desktop\\R\\Finance")
 
 #Load Libraries
 library(tidyverse) # This includes dplyr, stringr, ggplot2, .. 
@@ -210,7 +209,7 @@ The annual rental receipts from the apartment:
 
 ```{r, echo=FALSE}
 # Cleaning and displaying the data frame for the change in the price index of apartments owned by tenants.
-DF_Appartments <- read.csv('apparment_index.csv')
+DF_Appartments <- read.csv('data/apparment_index.csv')
 DF_Appartments$Annual_AVG_12 <- as.numeric(gsub(",", "", DF_Appartments$Annual_AVG))
 DF_Appartments$Annual_AVG_12 <- 12*DF_Appartments$Annual_AVG_12 
 DF_Appartments$Annual_AVG <- as.numeric(gsub(",", "", DF_Appartments$Annual_AVG))
@@ -228,7 +227,7 @@ The change in the price index of apartments owned by tenants:
 
 ```{r, echo=FALSE}
 # Displaying the data frame for the annual average rent
-DF_Index <- read.csv('price_index.csv')
+DF_Index <- read.csv('data/price_index.csv')
 DF_Index
 
 # Defining the change in the price index of apartments from 2012 to 2022
@@ -403,10 +402,10 @@ dollar_exchange <- c(3.754,3.484,3.888,3.896,3.835,3.444,3.726,3.449,3.212,3.104
 
 
 # loading the csv files.
-DF_MSCI<- read.csv('MSCI.csv')
-DF_SP500 <- read.csv('SnP500.csv')
-DF_TA125 <- read.csv('TA125.csv')
-DF_TB20 <- read.csv('TB20.csv')
+DF_MSCI<- read.csv('data/MSCI.csv')
+DF_SP500 <- read.csv('data/SnP500.csv')
+DF_TA125 <- read.csv('data/TA125.csv')
+DF_TB20 <- read.csv('data/TB20.csv')
 
 # Turning numeric
 DF_MSCI[,2:7] <- sapply(DF_MSCI[,2:7],as.numeric)
@@ -557,8 +556,8 @@ The monthly return over the 60 months of Strauss stock:
 
 ```{r,echo=FALSE,warning=FALSE}
 # Cleaning and displaying the data frame for Strauss and Hilan stocks
-DF_Strauss <- read.csv('STRS.TA.csv')
-DF_Hilan <- read.csv('HLAN.TA.csv')
+DF_Strauss <- read.csv('data/STRS.TA.csv')
+DF_Hilan <- read.csv('data/HLAN.TA.csv')
 
 # Turning numeric 
 DF_Strauss[,2:7] <- sapply(DF_Strauss[,2:7],as.numeric)
@@ -792,7 +791,7 @@ The monthly return over the 60 months of Azorim stock:
 
 ```{r ,echo=FALSE,warning=FALSE}
 
-DF_AZRM <- read.csv('AZRM.TA.csv')
+DF_AZRM <- read.csv('data/AZRM.TA.csv')
 
 DF_AZRM[,2:7] <- sapply(DF_AZRM[,2:7],as.numeric)
 
@@ -928,7 +927,7 @@ The Apple In Sample data (adjusted price monthly returns):
 
 ```{r ,echo=FALSE,warning=FALSE}
 # load the Apple IN data
-DF_AAPL_IN <- read.csv('AAPL.IN.csv')
+DF_AAPL_IN <- read.csv('data/AAPL.IN.csv')
 DF_AAPL_IN[,2:7] <- sapply(DF_AAPL_IN[,2:7],as.numeric)
 
 Yield_AAPL_IN <- c()
@@ -955,7 +954,7 @@ The Apple Out Sample data (adjusted price monthly returns):
 
 ```{r ,echo=FALSE,warning=FALSE}
 # load the Apple Out data
-DF_AAPL_OUT <- read.csv('AAPL.OUT.csv')
+DF_AAPL_OUT <- read.csv('data/AAPL.OUT.csv')
 DF_AAPL_OUT[,2:7] <- sapply(DF_AAPL_OUT[,2:7],as.numeric)
 
 Yield_AAPL_OUT <- c()
@@ -980,7 +979,7 @@ The Coca Cola In Sample data (adjusted price monthly returns):
 
 ```{r ,echo=FALSE,warning=FALSE}
 # load the Coca Cola IN data
-DF_COLA_IN <- read.csv('COLA.IN.csv')
+DF_COLA_IN <- read.csv('data/COLA.IN.csv')
 DF_COLA_IN[,2:7] <- sapply(DF_COLA_IN[,2:7],as.numeric)
 
 Yield_COLA_IN <- c()
@@ -1006,7 +1005,7 @@ The Coca Cola Out Sample data (adjusted price monthly returns):
 
 ```{r ,echo=FALSE,warning=FALSE}
 # load the Coca Cola OUT data
-DF_COLA_OUT <- read.csv('COLA.OUT.csv')
+DF_COLA_OUT <- read.csv('data/COLA.OUT.csv')
 DF_COLA_OUT[,2:7] <- sapply(DF_COLA_OUT[,2:7],as.numeric)
 
 Yield_COLA_OUT <- c()
@@ -1032,7 +1031,7 @@ The Walt Disney In Sample data (adjusted price monthly returns):
 
 ```{r ,echo=FALSE,warning=FALSE}
 # load the Walt Disney IN data
-DF_DIS_IN <- read.csv('DIS.IN.csv')
+DF_DIS_IN <- read.csv('data/DIS.IN.csv')
 DF_DIS_IN[,2:7] <- sapply(DF_DIS_IN[,2:7],as.numeric)
 
 Yield_DIS_IN <- c()
@@ -1058,7 +1057,7 @@ The Walt Disney Out Sample data (adjusted price monthly returns):
 
 ```{r ,echo=FALSE,warning=FALSE}
 # load the Walt Disney OUT data
-DF_DIS_OUT <- read.csv('DIS.OUT.csv')
+DF_DIS_OUT <- read.csv('data/DIS.OUT.csv')
 DF_DIS_OUT[,2:7] <- sapply(DF_DIS_OUT[,2:7],as.numeric)
 
 Yield_DIS_OUT <- c()
@@ -1084,7 +1083,7 @@ The Abbott Laboratories In Sample data (adjusted price monthly returns):
 
 ```{r ,echo=FALSE,warning=FALSE}
 # load the Abbott Laboratories IN data
-DF_ABT_IN <- read.csv('ABT.IN.csv')
+DF_ABT_IN <- read.csv('data/ABT.IN.csv')
 DF_ABT_IN[,2:7] <- sapply(DF_ABT_IN[,2:7],as.numeric)
 
 Yield_ABT_IN <- c()
@@ -1110,7 +1109,7 @@ The Abbott Laboratories Out Sample data (adjusted price monthly returns):
 
 ```{r ,echo=FALSE,warning=FALSE}
 # load the Abbott Laboratories OUT data
-DF_ABT_OUT <- read.csv('ABT.OUT.csv')
+DF_ABT_OUT <- read.csv('data/ABT.OUT.csv')
 DF_ABT_OUT[,2:7] <- sapply(DF_ABT_OUT[,2:7],as.numeric)
 
 Yield_ABT_OUT <- c()
@@ -1136,7 +1135,7 @@ The estimated risk free rate In Sample data (adjusted price monthly returns):
 
 ```{r ,echo=FALSE,warning=FALSE}
 # load the estimated risk free rate IN data
-DF_BONDS_IN <- read.csv('BONDS.IN.csv')
+DF_BONDS_IN <- read.csv('data/BONDS.IN.csv')
 DF_BONDS_IN$Monthly_Return <- DF_BONDS_IN$Monthly_Return +1 
 
 Yield_BONDS_IN <- c()
@@ -1162,7 +1161,7 @@ The estimated risk free rate OUT Sample data (adjusted price monthly returns):
 
 ```{r ,echo=FALSE,warning=FALSE}
 # load the estimated risk free rate OUT data
-DF_BONDS_OUT <- read.csv('BONDS.OUT.csv')
+DF_BONDS_OUT <- read.csv('data/BONDS.OUT.csv')
 DF_BONDS_OUT$Monthly_Return <- DF_BONDS_OUT$Monthly_Return +1
 
 Yield_BONDS_OUT <- c()
@@ -1188,7 +1187,7 @@ The estimated market portfolio In Sample data (adjusted price monthly returns):
 
 ```{r ,echo=FALSE,warning=FALSE}
 # load the estimated market portfolio IN data
-DF_SPY_IN <- read.csv('SPY.IN.csv')
+DF_SPY_IN <- read.csv('data/SPY.IN.csv')
 DF_SPY_IN[,2:7] <- sapply(DF_SPY_IN[,2:7],as.numeric)
 
 Yield_SPY_IN <- c()
@@ -1214,7 +1213,7 @@ The estimated market portfolio Out Sample data (adjusted price monthly returns):
 
 ```{r ,echo=FALSE,warning=FALSE}
 # load the estimated market portfolio OUT data
-DF_SPY_OUT <- read.csv('SPY.OUT.csv')
+DF_SPY_OUT <- read.csv('data/SPY.OUT.csv')
 DF_SPY_OUT[,2:7] <- sapply(DF_SPY_OUT[,2:7],as.numeric)
 
 Yield_SPY_OUT <- c()
@@ -1541,7 +1540,7 @@ For the equally weighted ETF we chose:
 Invesco S&P 500 Equal Weight ETF (RSP).
 
 ```{r ,echo=FALSE,warning=FALSE}
-DF_ETF_500 <- read.csv("ETF.500.csv")
+DF_ETF_500 <- read.csv("data/ETF.500.csv")
 ```
 
 
@@ -1623,7 +1622,7 @@ Meta Platforms Inc Class A, Microsoft Corp, Amazon.com Inc.
 First, we will find the Sharp Ratio:
 
 ```{r ,echo=FALSE,warning=FALSE}
-DF_PNQI <- read.csv("PNQI.csv")
+DF_PNQI <- read.csv("data/PNQI.csv")
 
 DF_PNQI[,2:7] <- sapply(DF_PNQI[,2:7],as.numeric)
 
@@ -1850,7 +1849,7 @@ Number of IPO (New companies) - Num.IPO.NC
 **NOTE** : The "Amount Raised" parameter is in millions of shekels. 
 
 ```{r ,echo=FALSE,warning=FALSE}
-IPO_STAT <- read.csv("Draft.csv")
+IPO_STAT <- read.csv("data/Draft.csv")
 IPO_STAT
 ```
 
@@ -1881,7 +1880,7 @@ Date with first data on it from Yahoo website : 13/09/2021
 
 ```{r ,echo=FALSE,warning=FALSE}
 # for the Impacx stock
-DF_IMPC <- read.csv("IMPC.TA.csv")
+DF_IMPC <- read.csv("data/IMPC.TA.csv")
 cumulative_return_IMPC <- ((DF_IMPC$Adj.Close[429]/DF_IMPC$Adj.Close[1])-1)*100
 annual__return_IMPC <- ((DF_IMPC$Adj.Close[317]/DF_IMPC$Adj.Close[73])-1)*100 
 
@@ -1902,7 +1901,7 @@ Date with first data on it from Yahoo website : 13/07/2021
 
 ```{r ,echo=FALSE,warning=FALSE}
 # for the Bareket stock
-DF_Bareket <- read.csv("BRKT.TA.csv")
+DF_Bareket <- read.csv("data/BRKT.TA.csv")
 cumulative_return_Bareket <- ((DF_Bareket$Adj.Close[469]/DF_Bareket$Adj.Close[1])-1)*100
 annual__return_Bareket <- ((DF_Bareket$Adj.Close[357]/DF_Bareket$Adj.Close[113])-1)*100 
 
@@ -1923,7 +1922,7 @@ Date with first data on it from Yahoo website : 11/11/2021
 
 ```{r ,echo=FALSE,warning=FALSE}
 # for the Sufrin stock
-DF_SFRN <- read.csv("SFRN.TA.csv")
+DF_SFRN <- read.csv("data/SFRN.TA.csv")
 cumulative_return_SFRN <- ((DF_SFRN$Adj.Close[392]/DF_SFRN$Adj.Close[1])-1)*100
 annual__return_SFRN <- ((DF_SFRN$Adj.Close[280]/DF_SFRN$Adj.Close[36])-1)*100 
 
@@ -1944,7 +1943,7 @@ Date with first data on it from Yahoo website : 30/08/2021
 
 ```{r ,echo=FALSE,warning=FALSE}
 # for the Rav-Bariach stock
-DF_BRIH <- read.csv("BRIH.TA.csv")
+DF_BRIH <- read.csv("data/BRIH.TA.csv")
 cumulative_return_BRIH <- ((DF_BRIH$Adj.Close[436]/DF_BRIH$Adj.Close[1])-1)*100
 annual__return_BRIH <- ((DF_BRIH$Adj.Close[324]/DF_BRIH$Adj.Close[80])-1)*100 
 
@@ -1965,7 +1964,7 @@ Date with first data on it from Yahoo website : 11/01/2021
 
 ```{r ,echo=FALSE,warning=FALSE}
 # for the PlantArc stock
-DF_PLNT <- read.csv("PLNT.TA.csv")
+DF_PLNT <- read.csv("data/PLNT.TA.csv")
 cumulative_return_PLNT <- ((DF_PLNT$Adj.Close[594]/DF_PLNT$Adj.Close[1])-1)*100
 annual__return_PLNT <- ((DF_PLNT$Adj.Close[482]/DF_PLNT$Adj.Close[238])-1)*100 
 
@@ -1986,7 +1985,7 @@ Date with first data on it from Yahoo website : 18/11/2021
 
 ```{r ,echo=FALSE,warning=FALSE}
 # for the Aluma stock
-DF_ALUMA <- read.csv("ALUMA.TA.csv")
+DF_ALUMA <- read.csv("data/ALUMA.TA.csv")
 cumulative_return_ALUMA <- ((DF_ALUMA$Adj.Close[387]/DF_ALUMA$Adj.Close[1])-1)*100
 annual__return_ALUMA <- ((DF_ALUMA$Adj.Close[275]/DF_ALUMA$Adj.Close[31])-1)*100 
 
