@@ -1,5 +1,7 @@
 # Finance & Investment Analysis
 
+**Would an Israeli rental apartment have beaten the stock market? How should two stocks be combined into the best portfolio? Do betas estimated on the past predict the future?**
+
 A corporate finance and portfolio analysis in R, using real Israeli and US market data. It covers capital budgeting, real-estate versus stock-market returns, Markowitz portfolio optimisation, CAPM betas tested out-of-sample, ETF performance and an IPO valuation.
 
 **[Read the full report (PDF) →](docs/finance_report.pdf)**
@@ -51,4 +53,4 @@ R · tidyverse · ggplot2 · R Markdown · LaTeX
 
 ## Background
 
-Written in June 2023 as a group assignment for *Finance for Economists* at the Hebrew University of Jerusalem (B.Sc. Statistics & Data Science).
+Built in June 2023 as a group project during the *Finance for Economists* course at the Hebrew University of Jerusalem (B.Sc. Statistics & Data Science).
